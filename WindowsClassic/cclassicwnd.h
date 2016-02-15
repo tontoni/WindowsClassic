@@ -2,12 +2,20 @@
 #ifndef _CCLASSICWND_H_
 #define _CCLASSICWND_H_
 
+#pragma once
+
 #include <Windows.h>
 
 #include "types.h"
 #include "cdrawutils.h"
 
-#define CLASSIC_DEFAULT_COLOR (DWORD)0xC0C0C0
+#define CLASSIC_DEFAULT_BASECOLOR		(DWORD)0xC0C0C0
+
+#define MAKESIZE(a, b)					(a - b)
+#define MAKEWIDTH(rect)					MAKESIZE(rect.right, rect.left)
+#define MAKEHEIGHT(rect)				MAKESIZE(rect.bottom, rect.top)
+
+#define MAKECOORDINATE(a, b)			(a + b)
 
 enum WindowEdge
 {
@@ -50,6 +58,11 @@ class CClassicWnd
 		return window->WndProc_Client(hWnd, message, wParam, lParam);
 	}
 
+	RECT						AREA_GetTitlebarBounds();
+	RECT						AREA_GetCloseButtonBounds();
+	RECT						AREA_GetMaximizeButtonBounds();
+	RECT						AREA_GetMinimizeButtonBounds();
+
 	public:
 		CClassicWnd(HINSTANCE hInst, HICON icon = NULL, HICON icon_small = NULL);
 		~CClassicWnd();
@@ -59,6 +72,8 @@ class CClassicWnd
 												int width     = -1, 
 												int height    = -1, 
 												TSTRING title = NULL);
+
+		void					Dispose();
 		
 		void					SetBounds(int xPos, 
 											int yPos, 
@@ -74,9 +89,11 @@ class CClassicWnd
 		void					SetMinimizable(bool minimizable);
 		void					SetVisible(bool visible);
 
-		void					SetBackground(HBRUSH brush);
+		void					SetBackgroundColor(DWORD color);
+		void					SetForegroundColor(DWORD color);
 
-		void					Repaint();
+		void					RepaintWindow();
+		void					RepaintClientArea();
 
 		inline bool				IsReady()						{ return ((this->hWnd) && (this->hWnd_client) && (this->visible)); }
 		inline bool				IsClosable()					{ return this->closable; }
@@ -102,7 +119,13 @@ class CClassicWnd
 								hWnd_client;
 
 		HFONT					titlebar_font;
-		const HBRUSH			classic_default_color			= CreateSolidBrush(CLASSIC_DEFAULT_COLOR);
+		const HBRUSH			classic_default_brush			= CreateSolidBrush(CLASSIC_DEFAULT_BASECOLOR);
+
+		//////////////////////////////
+		//	CLIENT AREA PROPERTIES	//
+		//////////////////////////////
+		DWORD					__background_color				= CLASSIC_DEFAULT_BASECOLOR, 
+								__foreground_color				= CLASSIC_DEFAULT_BASECOLOR;
 
 		TSTRING					__title							= NULL;
 		RECT					__bounds;

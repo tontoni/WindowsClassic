@@ -70,6 +70,46 @@ static WindowEdge IsPointInWindowEdge(int px, int py, int win_width, int win_hei
 #define WND_CLASSNAME			"Windows_Classic_Window"
 #define WND_CLASSNAME_CLIENT	"Windows_Classic_Client"
 
+RECT CClassicWnd::AREA_GetTitlebarBounds()
+{
+	RECT bounds = { 
+		3, 3, 
+		MAKEWIDTH(this->__bounds) - 57, 18
+	};
+
+	return bounds;
+}
+
+RECT CClassicWnd::AREA_GetCloseButtonBounds()
+{
+	RECT bounds = {
+		MAKEWIDTH(this->__bounds) - 21, 5,
+		16, 14
+	};
+
+	return bounds;
+}
+
+RECT CClassicWnd::AREA_GetMaximizeButtonBounds()
+{
+	RECT bounds = {
+		MAKEWIDTH(this->__bounds) - 39, 5, 
+		16, 14
+	};
+
+	return bounds;
+}
+
+RECT CClassicWnd::AREA_GetMinimizeButtonBounds()
+{
+	RECT bounds = {
+		MAKEWIDTH(this->__bounds) - 55, 5,
+		16, 14
+	};
+
+	return bounds;
+}
+
 CClassicWnd::CClassicWnd(HINSTANCE hInst, HICON icon, HICON icon_small)
 {
 	this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
@@ -81,7 +121,7 @@ CClassicWnd::CClassicWnd(HINSTANCE hInst, HICON icon, HICON icon_small)
 	this->wnd_class.hIcon				= icon;
 	this->wnd_class.hIconSm				= icon_small;
 	this->wnd_class.hCursor				= LoadCursor(NULL, IDC_ARROW);
-	this->wnd_class.hbrBackground		= (HBRUSH)(COLOR_WINDOW + 1);
+	this->wnd_class.hbrBackground		= this->classic_default_brush;
 	this->wnd_class.lpszMenuName		= NULL;
 	this->wnd_class.lpszClassName		= WND_CLASSNAME;
 
@@ -100,7 +140,7 @@ CClassicWnd::CClassicWnd(HINSTANCE hInst, HICON icon, HICON icon_small)
 	this->wnd_class_client.hIcon			= NULL;
 	this->wnd_class_client.hIconSm			= NULL;
 	this->wnd_class_client.hCursor			= this->wnd_class.hCursor;
-	this->wnd_class_client.hbrBackground	= this->classic_default_color;
+	this->wnd_class_client.hbrBackground	= this->classic_default_brush;
 	this->wnd_class_client.lpszMenuName		= NULL;
 	this->wnd_class_client.lpszClassName	= WND_CLASSNAME_CLIENT;
 	
@@ -160,6 +200,11 @@ int CClassicWnd::CreateAndShow(int xPos,
 	}
 
 	return (int)msg.wParam;
+}
+
+void CClassicWnd::Dispose()
+{
+	SendMessage(this->hWnd, WM_DESTROY, 0, 0);
 }
 
 // Private function
@@ -243,25 +288,25 @@ void CClassicWnd::SetTitle(TSTRING new_title)
 		return;
 
 	SetWindowText(this->hWnd, new_title);
-	this->Repaint();
+	this->RepaintWindow();
 }
 
 void CClassicWnd::SetClosable(bool closable)
 {
 	this->closable = closable;
-	this->Repaint();
+	this->RepaintWindow();
 }
 
 void CClassicWnd::SetResizable(bool resizable)
 {
 	this->resizable = resizable;
-	this->Repaint();
+	this->RepaintWindow();
 }
 
 void CClassicWnd::SetMinimizable(bool minimizable)
 {
 	this->minimizable = minimizable;
-	this->Repaint();
+	this->RepaintWindow();
 }
 
 void CClassicWnd::SetVisible(bool visible)
@@ -275,21 +320,32 @@ void CClassicWnd::SetVisible(bool visible)
 	}
 }
 
-// TODO(toni): Setting the background currently doesn't work
-// And i don't know why :/
-void CClassicWnd::SetBackground(HBRUSH brush)
+void CClassicWnd::SetBackgroundColor(DWORD color)
 {
-	SetClassLongPtr(this->hWnd_client, GCLP_HBRBACKGROUND, (LONG)brush);
-	this->Repaint();
+	this->__background_color = color;
+	this->RepaintClientArea();
 }
 
-void CClassicWnd::Repaint()
+void CClassicWnd::SetForegroundColor(DWORD color)
+{
+	this->__foreground_color = color;
+	this->RepaintClientArea();
+}
+
+void CClassicWnd::RepaintWindow()
 {
 	if (!this->IsReady())
 		return;
 
 	RedrawWindow(this->hWnd, NULL, NULL, RDW_INVALIDATE);
-	// InvalidateRect(this->hWnd_client, NULL, FALSE);
+}
+
+void CClassicWnd::RepaintClientArea()
+{
+	if (!this->IsReady())
+		return;
+
+	RedrawWindow(this->hWnd_client, NULL, NULL, RDW_INVALIDATE);
 }
 
 RECT CClassicWnd::GetWindowBounds()
@@ -306,10 +362,7 @@ RECT CClassicWnd::GetWindowBounds()
 POINT CClassicWnd::GetPosition()
 {
 	RECT _rect = this->GetWindowBounds();
-
-	POINT p;
-	p.x = _rect.left;
-	p.y = _rect.top;
+	POINT p = { _rect.left, _rect.top };
 
 	return p;
 }
@@ -317,11 +370,7 @@ POINT CClassicWnd::GetPosition()
 SIZE CClassicWnd::GetWindowSize()
 {
 	RECT _rect = this->GetWindowBounds();
-
-	SIZE s;
-	s.cx = (_rect.right - _rect.left);
-	s.cy = (_rect.bottom - _rect.top);
-
+	SIZE s = { MAKEWIDTH(_rect), MAKEHEIGHT(_rect) };
 	return s;
 }
 
@@ -330,9 +379,7 @@ SIZE CClassicWnd::GetClientSize()
 	RECT _rect;
 	GetWindowRect(this->hWnd_client, &_rect);
 
-	SIZE s;
-	s.cx = (_rect.right - _rect.left);
-	s.cy = (_rect.bottom - _rect.top);
+	SIZE s = { MAKEWIDTH(_rect), MAKEHEIGHT(_rect) };
 
 	return s;
 }
@@ -348,8 +395,8 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 	RECT wnd_bounds;
 	GetWindowRect(hWnd, &wnd_bounds);
 
-	int width = (wnd_bounds.right - wnd_bounds.left),
-		height = (wnd_bounds.bottom - wnd_bounds.top);
+	int width = MAKEWIDTH(wnd_bounds),
+		height = MAKEHEIGHT(wnd_bounds);
 
 	switch (message)
 	{
@@ -428,21 +475,26 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			SelectObject(hdc, this->titlebar_font);
 
 			// Window Border draw code
-
+			DRAWCONTEXT context;
+			context.hdc = hdc;
+			
 			// The base color is that nice Windows Classic gray
-			CDrawUtils::FillRectangle3D(hdc, 0, 0, width, height, 0xC0C0C0, true);
+			context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+			context.draw_color = 0x000000;
+
+			CDrawUtils::FillRectangle3D(&context, 0, 0, width, height, true);
 
 			// Window titlebar drawcode
 
 			DWORD col_active = (activated ? 0x800000 : 0x808080);
+			context.fill_color = col_active;
 
 			CDrawUtils::FillSolidRectangle(
-				hdc, 
+				&context, 
 				3, 
 				3, 
 				width - 6, 
-				18, 
-				col_active
+				18
 			);
 
 			int title_x = 5;
@@ -470,20 +522,22 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			TCHAR wnd_title[128];
 			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
 
+			context.fill_color = col_active;
+			context.draw_color = 0xFFFFFF;
+
 			CDrawUtils::DrawString(
-				hdc, 
+				&context, 
 				title_x, 5, 
 				width - (title_w_div + title_x), 18, 
-				wnd_title, 
-				col_active, 
-				0xFFFFFF
+				wnd_title
 			);
 
 			// X button
 			// Hardcoded colors - Not great i know!
 			if (this->closable)
 			{
-				CDrawUtils::FillRectangle3DSmall(hdc, width - 21, 5, 16, 14, 0xC0C0C0, !pressed_button_close);
+				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+				CDrawUtils::FillRectangle3DSmall(&context, width - 21, 5, 16, 14, !pressed_button_close);
 
 				POINT x_pnt_1[4];
 				x_pnt_1[0].x = width - 17;
@@ -505,45 +559,68 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				x_pnt_2[3].x = width - 17;
 				x_pnt_2[3].y = 14;
 
-				CDrawUtils::FillPolygon(hdc, x_pnt_1, ARRAYSIZE(x_pnt_1), 0x000000);
-				CDrawUtils::FillPolygon(hdc, x_pnt_2, ARRAYSIZE(x_pnt_2), 0x000000);
+				context.fill_color = 0x000000;
+
+				CDrawUtils::FillPolygon(&context, x_pnt_1, ARRAYSIZE(x_pnt_1));
+				CDrawUtils::FillPolygon(&context, x_pnt_2, ARRAYSIZE(x_pnt_2));
 			}
 
 			// Maximize button
 			if ((this->resizable) || 
 				(this->minimizable))
 			{
-				CDrawUtils::FillRectangle3DSmall(hdc, width - 39, 5, 16, 14, 0xC0C0C0, !this->pressed_button_maximize);
+				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+				CDrawUtils::FillRectangle3DSmall(&context, width - 39, 5, 16, 14, !this->pressed_button_maximize);
 
 				if (maximized)
 				{
-					CDrawUtils::FillSolidRectangle(hdc, width - 34, 7, 6, 6, 0x000000);
-					CDrawUtils::FillSolidRectangle(hdc, width - 33, 9, 4, 3, 0xC0C0C0);
+					context.fill_color = 0x0000000;
+					CDrawUtils::FillSolidRectangle(&context, width - 34, 7, 6, 6);
 
-					CDrawUtils::FillSolidRectangle(hdc, width - 36, 10, 6, 6, 0x000000);
-					CDrawUtils::FillSolidRectangle(hdc, width - 35, 12, 4, 3, 0xC0C0C0);
+					context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+					CDrawUtils::FillSolidRectangle(&context, width - 33, 9, 4, 3);
+
+					context.fill_color = 0x0000000;
+					CDrawUtils::FillSolidRectangle(&context, width - 36, 10, 6, 6);
+
+					context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+					CDrawUtils::FillSolidRectangle(&context, width - 35, 12, 4, 3);
 				}
 				else if (!this->resizable)
 				{
 					// When the maximize button is disabled...
 					// Unmaximized state
-					CDrawUtils::FillSolidRectangle(hdc, width - 35, 8, 9, 9, 0xFFFFFF);
-					CDrawUtils::FillSolidRectangle(hdc, width - 36, 7, 9, 9, 0x808080);
-					CDrawUtils::FillSolidRectangle(hdc, width - 35, 9, 7, 6, 0xFFFFFF);
-					CDrawUtils::FillSolidRectangle(hdc, width - 34, 10, 6, 5, 0xC0C0C0);
+
+					context.fill_color = 0xFFFFFF;
+					CDrawUtils::FillSolidRectangle(&context, width - 35, 8, 9, 9);
+
+					context.fill_color = 0x808080;
+					CDrawUtils::FillSolidRectangle(&context, width - 36, 7, 9, 9);
+
+					context.fill_color = 0xFFFFFF;
+					CDrawUtils::FillSolidRectangle(&context, width - 35, 9, 7, 6);
+
+					context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+					CDrawUtils::FillSolidRectangle(&context, width - 34, 10, 6, 5);
 				}
 				else
 				{
-					CDrawUtils::FillSolidRectangle(hdc, width - 36, 7, 9, 9, 0x000000);
-					CDrawUtils::FillSolidRectangle(hdc, width - 35, 9, 7, 6, 0xC0C0C0);
+					context.fill_color = 0x000000;
+					CDrawUtils::FillSolidRectangle(&context, width - 36, 7, 9, 9);
+
+					context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+					CDrawUtils::FillSolidRectangle(&context, width - 35, 9, 7, 6);
 				}
 			}
 			
 			// Minimize button
 			if (this->minimizable)
 			{
-				CDrawUtils::FillRectangle3DSmall(hdc, width - 55, 5, 16, 14, 0xC0C0C0, !this->pressed_button_minimize);
-				CDrawUtils::FillSolidRectangle(hdc, width - 51, 14, 6, 2, 0x000000);
+				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
+				CDrawUtils::FillRectangle3DSmall(&context, width - 55, 5, 16, 14, !this->pressed_button_minimize);
+
+				context.fill_color = 0x000000;
+				CDrawUtils::FillSolidRectangle(&context, width - 51, 14, 6, 2);
 			}
 
 			EndPaint(hWnd, &paint_strct);
@@ -557,19 +634,19 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			if (IsPointOverCloseButton(mx, my, width, this->closable))
 			{
 				this->pressed_button_close = true;
-				this->Repaint();
+				this->RepaintWindow();
 			}
 			// Maximize button
 			else if (IsPointOverMaximizeButton(mx, my, width, this->resizable))
 			{
 				this->pressed_button_maximize = true;
-				this->Repaint();
+				this->RepaintWindow();
 			}
 			// Minimize button
 			else if (IsPointOverMinimizeButton(mx, my, width, this->minimizable))
 			{
 				this->pressed_button_minimize = true;
-				this->Repaint();
+				this->RepaintWindow();
 			}
 			else if (!this->maximized)
 			{
@@ -614,10 +691,11 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				
 				if (IsPointOverCloseButton(mx, my, width, this->closable))
 				{
-					PostQuitMessage(0); // User clicked and released on the X button
+					// User clicked and released on the X button
+					SendMessage(hWnd, WM_DESTROY, 0, 0);
 				}
 
-				this->Repaint();
+				this->RepaintWindow();
 			}
 
 			if (this->pressed_button_maximize)
@@ -635,7 +713,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 					this->maximized = true;
 				}
 
-				this->Repaint();
+				this->RepaintWindow();
 			}
 
 			if (this->pressed_button_minimize)
@@ -648,7 +726,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 					this->minimized = true;
 				}
 
-				this->Repaint();
+				this->RepaintWindow();
 			}
 			
 			ReleaseCapture();
@@ -832,10 +910,12 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				this->minimized = false;
 
 			// Make the Window repaint
-			this->Repaint();
+			this->RepaintWindow();
 		} break;
 		case WM_DESTROY:
 		{
+			DestroyWindow(this->hWnd_client);
+			DestroyWindow(this->hWnd);
 			PostQuitMessage(0);
 		} break;
 		default:
@@ -852,6 +932,12 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 												WPARAM wParam,
 												LPARAM lParam)
 {
+	RECT bounds;
+	GetWindowRect(hWnd, &bounds);
+
+	int width = MAKEWIDTH(bounds),
+		height = MAKEHEIGHT(bounds);
+
 	switch (message)
 	{
 		case WM_CREATE:
@@ -865,13 +951,18 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 
 			hdc = BeginPaint(hWnd, &paintstrct);
 			
-			SetBkColor(hdc, CLASSIC_DEFAULT_COLOR);
+			DRAWCONTEXT context;
+			context.hdc = hdc;
+			context.fill_color = this->__background_color;
+			context.draw_color = this->__foreground_color;
+
+			CDrawUtils::FillSolidRectangle(&context, 0, 0, width, height);
 
 			// This draw code is just for debugging here!
 			// In the future this will probably go away
-			CDrawUtils::DrawString(hdc, 15, 40, -1, -1, "Microsoft doesn\'t wanna give us Windows Classic");
-			CDrawUtils::DrawString(hdc, 15, 60, -1, -1, "So we give Windows Classic to Microsoft!");
-			CDrawUtils::DrawString(hdc, 15, 80, -1, -1, ":P");
+			CDrawUtils::DrawString(&context, 15, 40, -1, -1, "Microsoft doesn\'t wanna give us Windows Classic");
+			CDrawUtils::DrawString(&context, 15, 60, -1, -1, "So we give Windows Classic to Microsoft!");
+			CDrawUtils::DrawString(&context, 15, 80, -1, -1, ":P");
 
 			EndPaint(hWnd, &paintstrct);
 		} break;

@@ -16,6 +16,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	window->SetPosition(200, 200);
 	window->SetSize(400, 300);
 
+	window->SetBackgroundColor(0x000000);
+
 	// window->SetClosable(false);		- Default = true
 	// window->SetResizable(false);		- Default = true
 	// window->SetMinimizable(false);	- Default = true

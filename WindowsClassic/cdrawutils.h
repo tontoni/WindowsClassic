@@ -3,6 +3,15 @@
 #define _CDRAWUTILS_H_
 
 #include <Windows.h>
+#include "types.h"
+
+typedef struct
+{
+	HDC hdc;
+
+	DWORD fill_color,
+		  draw_color;
+} DRAWCONTEXT;
 
 class CDrawUtils
 {
@@ -13,42 +22,36 @@ class CDrawUtils
 		static DWORD			MakeColorBrighter(DWORD color, 
 													BYTE by_how_much);
 
-		static void				FillSolidRectangle(HDC context,
+		static void				FillSolidRectangle(DRAWCONTEXT *context,
 													int x,
 													int y,
 													int w,
-													int h,
-													DWORD color);
+													int h);
 
-		static void				FillPolygon(HDC context,
+		static void				FillPolygon(DRAWCONTEXT *context,
 											const POINT *vectors,
-											int vector_cnt,
-											DWORD color);
+											int vector_cnt);
 
-		static void				FillRectangle3DSmall(HDC context,
+		static void				FillRectangle3DSmall(DRAWCONTEXT *context,
 														int x,
 														int y,
 														int w,
 														int h, 
-														DWORD color, 
 														bool raised);
 
-		static void				FillRectangle3D(HDC context, 
+		static void				FillRectangle3D(DRAWCONTEXT *context,
 												int x, 
 												int y, 
 												int w, 
 												int h, 
-												DWORD color, 
 												bool raised);
 
-		static void				DrawString(HDC context,
+		static void				DrawString(DRAWCONTEXT *context,
 											int x,
 											int y,
 											int width, 
 											int height, 
-											char *string,
-											DWORD background_color = -1,
-											DWORD text_color = -1);
+											TSTRING string);
 };
 
 #endif // _CDRAWUTILS_H_
