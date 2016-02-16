@@ -7,10 +7,12 @@
 
 typedef struct
 {
-	HDC hdc;
+	PAINTSTRUCT paintstruct;
 
 	DWORD fill_color,
 		  draw_color;
+
+	HFONT font; // TODO(toni): Make use of custom context fonts!
 } DRAWCONTEXT;
 
 class CDrawUtils
@@ -47,11 +49,12 @@ class CDrawUtils
 												bool raised);
 
 		static void				DrawString(DRAWCONTEXT *context,
+											TSTRING string,
 											int x,
 											int y,
-											int width, 
-											int height, 
-											TSTRING string);
+											int width = -1, 
+											int height = -1, 
+											UINT text_format = DT_LEFT);
 };
 
 #endif // _CDRAWUTILS_H_

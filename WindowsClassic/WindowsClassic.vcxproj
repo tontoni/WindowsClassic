@@ -92,6 +92,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <AssemblerOutput>All</AssemblerOutput>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -112,14 +113,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="basiclist.c" />
     <ClCompile Include="cclassicwnd.cpp" />
     <ClCompile Include="cdrawutils.cpp" />
     <ClCompile Include="classic.cpp" />
+    <ClCompile Include="classiccomponents.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="windows.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="basiclist.h" />
     <ClInclude Include="cclassicwnd.h" />
     <ClInclude Include="cdrawutils.h" />
     <ClInclude Include="resource.h" />

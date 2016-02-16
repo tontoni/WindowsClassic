@@ -46,7 +46,7 @@ void CDrawUtils::FillSolidRectangle(DRAWCONTEXT *context,
 	rect.bottom = y + h;
 	
 	HBRUSH brush = CreateSolidBrush(context->fill_color);
-	FillRect(context->hdc, &rect, brush);
+	FillRect(context->paintstruct.hdc, &rect, brush);
 	DeleteObject(brush);
 }
 
@@ -55,9 +55,9 @@ void CDrawUtils::FillPolygon(DRAWCONTEXT *context,
 							int vector_cnt)
 {
 	HBRUSH brush = CreateSolidBrush(context->fill_color);
-	SelectObject(context->hdc, brush);
+	SelectObject(context->paintstruct.hdc, brush);
 
-	Polygon(context->hdc, vectors, vector_cnt);
+	Polygon(context->paintstruct.hdc, vectors, vector_cnt);
 
 	DeleteObject(brush);
 }
@@ -125,14 +125,15 @@ void CDrawUtils::FillRectangle3D(DRAWCONTEXT *context,
 }
 
 void CDrawUtils::DrawString(DRAWCONTEXT *context,
+							TSTRING string,
 							int x,
 							int y,
 							int width, 
 							int height, 
-							TSTRING string)
+							UINT text_format)
 {
-	SetTextColor(context->hdc, context->draw_color);
-	SetBkColor(context->hdc, context->fill_color);
+	SetBkColor(context->paintstruct.hdc, context->fill_color);
+	SetTextColor(context->paintstruct.hdc, context->draw_color);
 
 	if ((width > -1) && 
 		(height > -1))
@@ -143,10 +144,10 @@ void CDrawUtils::DrawString(DRAWCONTEXT *context,
 		bounds.right = (x + width);
 		bounds.bottom = (y + height);
 
-		DrawText(context->hdc, string, StrLen(string), &bounds, DT_LEFT);
+		DrawText(context->paintstruct.hdc, string, StrLen(string), &bounds, text_format);
 	}
 	else
 	{
-		TextOut(context->hdc, x, y, string, StrLen(string));
+		TextOut(context->paintstruct.hdc, x, y, string, StrLen(string));
 	}
 }

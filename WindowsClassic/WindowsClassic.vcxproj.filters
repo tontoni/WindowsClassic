@@ -24,6 +24,12 @@
     <ClCompile Include="cdrawutils.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="basiclist.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="classiccomponents.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="windows.ico">
@@ -41,6 +47,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="types.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="basiclist.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,21 +1,6 @@
 
 #include "cclassicwnd.h"
 
-static bool IsPointInArea(int px,
-							int py,
-							int ax,
-							int ay,
-							int aw,
-							int ah)
-{
-	return (
-		(px >= ax) &&
-		(py >= ay) &&
-		(px < (ax + aw)) &&
-		(py < (ay + ah))
-	);
-}
-
 #define IsPointOverTitlebar(mx, my, width)							(IsPointInArea(mx, my, 3, 3, width - 57, 18))
 #define IsPointOverCloseButton(mx, my, width, wnd_closable)			(IsPointInArea(mx, my, width - 21, 5, 16, 14)) && (wnd_closable)
 #define IsPointOverMaximizeButton(mx, my, width, wnd_resizable)		(IsPointInArea(mx, my, width - 39, 5, 16, 14)) && (wnd_resizable)
@@ -149,6 +134,8 @@ CClassicWnd::CClassicWnd(HINSTANCE hInst, HICON icon, HICON icon_small)
 		MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
 		return;
 	}
+
+	this->__components = List_Create(256);
 }
 
 CClassicWnd::~CClassicWnd()
@@ -202,9 +189,10 @@ int CClassicWnd::CreateAndShow(int xPos,
 	return (int)msg.wParam;
 }
 
-void CClassicWnd::Dispose()
+void CClassicWnd::Destroy()
 {
-	SendMessage(this->hWnd, WM_DESTROY, 0, 0);
+	DestroyWindow(this->hWnd_client);
+	DestroyWindow(this->hWnd);
 }
 
 // Private function
@@ -224,10 +212,10 @@ void __SetBounds(CClassicWnd *inst,
 		bounds.top = yPos;
 	
 	if (width > -1)
-		bounds.right = (bounds.left + width);
+		bounds.right = MAKECOORDINATE(bounds.left, width);
 	
 	if (height > -1)
-		bounds.bottom = (bounds.top + height);
+		bounds.bottom = MAKECOORDINATE(bounds.top, height);
 
 	if (!inst->IsReady())
 		return;
@@ -384,6 +372,33 @@ SIZE CClassicWnd::GetClientSize()
 	return s;
 }
 
+void CClassicWnd::AddComponent(CClassicComponent *component)
+{
+	List_Add(this->__components, component);
+	
+	// Doesn't work since the Parent HWND hasn't been created yet!
+	// component->OnAdd(this->hWnd_client);
+}
+
+void CClassicWnd::RemoveComponent(CClassicComponent *component)
+{
+	List_Remove(this->__components, component);
+	component->OnRemove(this->hWnd_client);
+}
+
+void CClassicWnd::RemoveAll()
+{
+	for (int i = 0; 
+		i < List_GetCount(this->__components); 
+		++i)
+	{
+		CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
+		comp->OnRemove(this->hWnd_client);
+	}
+
+	List_Clear(this->__components);
+}
+
 LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd, 
 										UINT message, 
 										WPARAM wParam, 
@@ -476,7 +491,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			// Window Border draw code
 			DRAWCONTEXT context;
-			context.hdc = hdc;
+			context.paintstruct = paint_strct;
 			
 			// The base color is that nice Windows Classic gray
 			context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
@@ -527,9 +542,9 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			CDrawUtils::DrawString(
 				&context, 
+				wnd_title, 
 				title_x, 5, 
-				width - (title_w_div + title_x), 18, 
-				wnd_title
+				width - (title_w_div + title_x), 18
 			);
 
 			// X button
@@ -657,8 +672,6 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 					this->prev_mx = mx;
 					this->prev_my = my;
-
-					SetCapture(hWnd);
 				}
 				// Window Edges
 				else if (this->resizable)
@@ -671,11 +684,11 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 						this->prev_mx = mx;
 						this->prev_my = my;
-
-						SetCapture(hWnd);
 					}
 				}
 			}
+
+			SetCapture(hWnd);
 		} break;
 		case WM_LBUTTONUP:
 		{
@@ -692,7 +705,8 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				if (IsPointOverCloseButton(mx, my, width, this->closable))
 				{
 					// User clicked and released on the X button
-					SendMessage(hWnd, WM_DESTROY, 0, 0);
+					this->Destroy();
+					break;
 				}
 
 				this->RepaintWindow();
@@ -913,9 +927,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			this->RepaintWindow();
 		} break;
 		case WM_DESTROY:
-		{
-			DestroyWindow(this->hWnd_client);
-			DestroyWindow(this->hWnd);
+		{			
 			PostQuitMessage(0);
 		} break;
 		default:
@@ -943,6 +955,21 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 		case WM_CREATE:
 		{
 			// Do something here ?
+
+			for (int i = 0; 
+				i < List_GetCount(this->__components); 
+				++i)
+			{
+				CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
+				comp->OnAdd(hWnd);
+			}
+		} break;
+		case WM_DESTROY:
+		{
+			this->RemoveAll();
+
+			DeleteList(this->__components);
+			this->__components = NULL;
 		} break;
 		case WM_PAINT:
 		{
@@ -952,7 +979,7 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 			hdc = BeginPaint(hWnd, &paintstrct);
 			
 			DRAWCONTEXT context;
-			context.hdc = hdc;
+			context.paintstruct = paintstrct;
 			context.fill_color = this->__background_color;
 			context.draw_color = this->__foreground_color;
 
@@ -960,17 +987,12 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 
 			// This draw code is just for debugging here!
 			// In the future this will probably go away
-			CDrawUtils::DrawString(&context, 15, 40, -1, -1, "Microsoft doesn\'t wanna give us Windows Classic");
-			CDrawUtils::DrawString(&context, 15, 60, -1, -1, "So we give Windows Classic to Microsoft!");
-			CDrawUtils::DrawString(&context, 15, 80, -1, -1, ":P");
+			CDrawUtils::DrawString(&context, "Microsoft doesn\'t wanna give us Windows Classic", 15, 40, -1, -1);
+			CDrawUtils::DrawString(&context, "So we give Windows Classic to Microsoft!", 15, 60, -1, -1);
+			CDrawUtils::DrawString(&context, ":P", 15, 80, -1, -1);
 
 			EndPaint(hWnd, &paintstrct);
 		} break;
-		case WM_LBUTTONDOWN:
-		case WM_LBUTTONUP:
-		{
-			return this->WndProc(hWnd, message, wParam, lParam);
-		}
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
 	}
