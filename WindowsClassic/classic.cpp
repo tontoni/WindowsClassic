@@ -1,7 +1,7 @@
 
 /*
 
-		SAME FILE FOR TESTING!
+		SAMPLE FILE FOR TESTING!
 
 */
 
