@@ -86,11 +86,21 @@ void __SetBounds(CClassicComponent *inst,
 	if (!inst->IsReady())
 		return;
 
+	if ((xPos <= -1) &&
+		(yPos <= -1))
+		flags |= SWP_NOMOVE;
+
+	if ((width <= -1) &&
+		(height <= -1))
+		flags |= SWP_NOSIZE;
+
 	SetWindowPos(
 		hWnd,
 		NULL,
-		xPos, yPos,
-		width, height,
+		(xPos > -1) ? xPos : bounds.left, 
+		(yPos > -1) ? yPos : bounds.top,
+		(width > -1) ? width : MAKEWIDTH(bounds), 
+		(height > -1) ? height : MAKEHEIGHT(bounds),
 		flags
 	);
 }
@@ -106,7 +116,7 @@ void __tagCClassicComponent::SetBounds(int x,
 		this->bounds, 
 		x, y, 
 		width, height, 
-		SWP_NOZORDER
+		SWP_NOZORDER | SWP_NOACTIVATE
 	);
 }
 
@@ -118,7 +128,44 @@ void __tagCClassicComponent::SetPosition(int x, int y)
 		this->bounds,
 		x, y,
 		-1, -1,
-		SWP_NOZORDER | SWP_NOSIZE
+		SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
+	);
+}
+
+void __tagCClassicComponent::SetXPosition(int x)
+{
+	this->SetBounds(x, -1, MAKEWIDTH(this->bounds), -1);
+}
+
+void __tagCClassicComponent::SetYPosition(int y)
+{
+	this->SetBounds(-1, y, -1, MAKEHEIGHT(this->bounds));
+}
+
+void __tagCClassicComponent::SetXPositionRelativeTo(RECT rect)
+{
+	this->SetXPosition(MAKERELATIVEPOSX(this->bounds, rect));
+}
+
+void __tagCClassicComponent::SetYPositionRelativeTo(RECT rect)
+{
+	this->SetYPosition(MAKERELATIVEPOSY(this->bounds, rect));
+}
+
+void __tagCClassicComponent::SetPositionRelativeTo(RECT rect)
+{
+	int xPos = MAKERELATIVEPOSX(this->bounds, rect),
+		yPos = MAKERELATIVEPOSY(this->bounds, rect);
+
+	__SetBounds(
+		this,
+		this->hWnd,
+		this->bounds,
+		xPos, 
+		yPos,
+		MAKEWIDTH(this->bounds), 
+		MAKEHEIGHT(this->bounds),
+		SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
 	);
 }
 
@@ -130,8 +177,14 @@ void __tagCClassicComponent::SetSize(int width, int height)
 		this->bounds,
 		-1, -1,
 		width, height,
-		SWP_NOZORDER | SWP_NOMOVE
+		SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE
 	);
+}
+
+void __tagCClassicComponent::SetFont(HFONT font)
+{
+	this->font = font;
+	this->RepaintComponent();
 }
 
 void __tagCClassicComponent::SetBackgroundColor(DWORD color)
@@ -171,11 +224,14 @@ LRESULT CALLBACK __tagCClassicComponent::WndProc(HWND hWnd,
 			PAINTSTRUCT paintstruct;
 
 			hdc = BeginPaint(hWnd, &paintstruct);
-
+			
 			DRAWCONTEXT context;
 			context.paintstruct = paintstruct;
 			context.fill_color = this->background_color;
 			context.draw_color = this->foreground_color;
+
+			if (this->font)
+				SelectObject(hdc, this->font);
 
 			this->PaintComponent(&context);
 			
@@ -288,16 +344,22 @@ LRESULT CALLBACK  __tagCClassicButton::HandleMessage(HWND hWnd,
 		} break;
 		case WM_LBUTTONUP:
 		{
-			if (this->pressed)
-			{
-				this->pressed = false;
-				this->RepaintComponent();
+			int mx = (int)LOWORD(lParam),
+				my = (int)HIWORD(lParam);
 
+			RECT wnd_bounds;
+			GetWindowRect(hWnd, &wnd_bounds);
+
+			this->pressed = false;
+			this->RepaintComponent();
+
+			if (IsPointInArea(mx, my, 0, 0, MAKEWIDTH(wnd_bounds), MAKEHEIGHT(wnd_bounds)))
+			{
 				if (this->event_listener) // User clicked on button
 					this->event_listener(this, message, wParam, lParam);
-
-				ReleaseCapture();
 			}
+
+			ReleaseCapture();
 		} break;
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);

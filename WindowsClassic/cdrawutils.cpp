@@ -45,21 +45,20 @@ void CDrawUtils::FillSolidRectangle(DRAWCONTEXT *context,
 	rect.right = x + w;
 	rect.bottom = y + h;
 	
-	HBRUSH brush = CreateSolidBrush(context->fill_color);
-	FillRect(context->paintstruct.hdc, &rect, brush);
-	DeleteObject(brush);
+	SetDCBrushColor(context->paintstruct.hdc, context->fill_color);
+	FillRect(context->paintstruct.hdc, &rect, (HBRUSH)GetStockObject(DC_BRUSH));
 }
 
 void CDrawUtils::FillPolygon(DRAWCONTEXT *context,
 							const POINT *vectors,
 							int vector_cnt)
 {
-	HBRUSH brush = CreateSolidBrush(context->fill_color);
-	SelectObject(context->paintstruct.hdc, brush);
+	SetDCBrushColor(context->paintstruct.hdc, context->fill_color);
+	// SelectObject(context->paintstruct.hdc, brush);
 
 	Polygon(context->paintstruct.hdc, vectors, vector_cnt);
 
-	DeleteObject(brush);
+	// DeleteObject(brush);
 }
 
 void CDrawUtils::FillRectangle3DSmall(DRAWCONTEXT *context,

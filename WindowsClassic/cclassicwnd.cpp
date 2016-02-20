@@ -185,7 +185,7 @@ int CClassicWnd::CreateAndShow(int xPos,
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-
+	
 	return (int)msg.wParam;
 }
 
@@ -205,12 +205,9 @@ void __SetBounds(CClassicWnd *inst,
 				int height, 
 				UINT flags)
 {
-	if (xPos > -1)
-		bounds.left = xPos;
-	
-	if (yPos > -1)
-		bounds.top = yPos;
-	
+	bounds.left = xPos;
+	bounds.top = yPos;
+
 	if (width > -1)
 		bounds.right = MAKECOORDINATE(bounds.left, width);
 	
@@ -219,12 +216,18 @@ void __SetBounds(CClassicWnd *inst,
 
 	if (!inst->IsReady())
 		return;
+	
+	if ((width <= -1) &&
+		(height <= -1))
+		flags |= SWP_NOSIZE;
 
 	SetWindowPos(
 		hWnd,
 		NULL,
-		xPos, yPos,
-		width, height,
+		xPos, 
+		yPos,
+		(width > -1) ? width : MAKEWIDTH(bounds), 
+		(height > -1) ? height : MAKEHEIGHT(bounds),
 		flags
 	);
 }
@@ -240,7 +243,7 @@ void CClassicWnd::SetBounds(int xPos,
 		this->__bounds, 
 		xPos, yPos, 
 		width, height, 
-		SWP_NOZORDER
+		SWP_NOZORDER | SWP_NOACTIVATE
 	);
 }
 
@@ -252,7 +255,24 @@ void CClassicWnd::SetPosition(int xPos, int yPos)
 		this->__bounds,
 		xPos, yPos,
 		-1, -1,
-		SWP_NOZORDER | SWP_NOSIZE
+		SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
+	);
+}
+
+void CClassicWnd::SetPositionRelativeTo(RECT bounds)
+{
+	int xPos = MAKERELATIVEPOSX(this->__bounds, bounds),
+		yPos = MAKERELATIVEPOSY(this->__bounds, bounds);
+
+	__SetBounds(
+		this, 
+		this->hWnd, 
+		this->__bounds, 
+		xPos, 
+		yPos, 
+		MAKEWIDTH(this->__bounds), 
+		MAKEHEIGHT(this->__bounds), 
+		SWP_NOZORDER | SWP_NOACTIVATE
 	);
 }
 
@@ -264,7 +284,7 @@ void CClassicWnd::SetSize(int width, int height)
 		this->__bounds,
 		-1, -1,
 		width, height,
-		SWP_NOZORDER | SWP_NOMOVE
+		SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE
 	);
 }
 
@@ -320,6 +340,18 @@ void CClassicWnd::SetForegroundColor(DWORD color)
 	this->RepaintClientArea();
 }
 
+void CClassicWnd::SetTitlebarFont(HFONT font)
+{
+	this->font_titlebar = font;
+	this->RepaintWindow();
+}
+
+void CClassicWnd::SetFont(HFONT font)
+{
+	this->font_element = font;
+	this->RepaintClientArea();
+}
+
 void CClassicWnd::RepaintWindow()
 {
 	if (!this->IsReady())
@@ -347,6 +379,21 @@ RECT CClassicWnd::GetWindowBounds()
 	return this->__bounds;
 }
 
+RECT CClassicWnd::GetClientBounds()
+{
+	// RECT _rect;
+	// GetWindowRect(this->hWnd_client, &_rect);
+
+	RECT _rect = {
+		0, // Left and Top are both always zero
+		0, // simply because the client area is relative to the window itself!
+		MAKEWIDTH(this->__bounds) - 6, 
+		MAKEHEIGHT(this->__bounds) - 25
+	};
+
+	return _rect;
+}
+
 POINT CClassicWnd::GetPosition()
 {
 	RECT _rect = this->GetWindowBounds();
@@ -364,9 +411,7 @@ SIZE CClassicWnd::GetWindowSize()
 
 SIZE CClassicWnd::GetClientSize()
 {
-	RECT _rect;
-	GetWindowRect(this->hWnd_client, &_rect);
-
+	RECT _rect = this->GetClientBounds();
 	SIZE s = { MAKEWIDTH(_rect), MAKEHEIGHT(_rect) };
 
 	return s;
@@ -417,21 +462,9 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 	{
 		case WM_CREATE:
 		{
-			const TSTRING font_name = "MS Sans Serif";
-			const long font_size = 8;
+			this->font_titlebar = CreateSimpleFont(hWnd, "MS Sans Serif", 8, FW_BOLD);
+			this->font_element = CreateSimpleFont(hWnd, "MS Sans Serif", 8);
 
-			hdc = GetDC(hWnd);
-			
-			LOGFONT logfont = { 0 };
-			logfont.lfHeight = -MulDiv(font_size, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-			logfont.lfWeight = FW_BOLD;
-
-			strcpy(logfont.lfFaceName, font_name);
-
-			this->titlebar_font = CreateFontIndirect(&logfont);
-
-			ReleaseDC(hWnd, hdc);
-			
 			// TODO(toni): Probably gonna change this in the future...
 
 			this->hWnd_client = CreateWindow(
@@ -461,7 +494,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			UpdateWindow(this->hWnd_client);
 
 			// Initial resize
-			SendMessage(this->hWnd, WM_SIZE, 0, MAKELPARAM(width, height));
+			SendMessage(hWnd, WM_SIZE, 0, MAKELPARAM(width, height));
 		} break;
 		case WM_SIZE:
 		{
@@ -478,7 +511,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 					-1, 
 					new_w - 6, // Remember: Always double the value
 					new_h - 25, 
-					SWP_NOZORDER | SWP_NOMOVE
+					SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE
 				);
 			}
 		} break;
@@ -487,7 +520,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			hdc = BeginPaint(hWnd, &paint_strct);
 
 			// Selecting our own font
-			SelectObject(hdc, this->titlebar_font);
+			SelectObject(hdc, this->font_titlebar);
 
 			// Window Border draw code
 			DRAWCONTEXT context;
@@ -888,7 +921,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 					new_wnd_bounds.top = wnd_bounds.top;
 				}
 
-				UINT flags = SWP_NOZORDER;
+				UINT flags = SWP_NOZORDER | SWP_NOACTIVATE;
 				
 				// The size hasn't changed, so it's not necessary to tell
 				// Windows to re-set the X and Y position of our Window!
@@ -927,7 +960,10 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			this->RepaintWindow();
 		} break;
 		case WM_DESTROY:
-		{			
+		{
+			DeleteObject(this->font_element);
+			DeleteObject(this->font_titlebar);
+
 			PostQuitMessage(0);
 		} break;
 		default:
@@ -962,6 +998,7 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 			{
 				CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
 				comp->OnAdd(hWnd);
+				comp->SetFont(this->font_element);
 			}
 		} break;
 		case WM_DESTROY:
@@ -978,6 +1015,8 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 
 			hdc = BeginPaint(hWnd, &paintstrct);
 			
+			SelectObject(hdc, this->font_element);
+
 			DRAWCONTEXT context;
 			context.paintstruct = paintstrct;
 			context.fill_color = this->__background_color;
@@ -985,11 +1024,13 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 
 			CDrawUtils::FillSolidRectangle(&context, 0, 0, width, height);
 
+#if 0
 			// This draw code is just for debugging here!
 			// In the future this will probably go away
 			CDrawUtils::DrawString(&context, "Microsoft doesn\'t wanna give us Windows Classic", 15, 40, -1, -1);
 			CDrawUtils::DrawString(&context, "So we give Windows Classic to Microsoft!", 15, 60, -1, -1);
 			CDrawUtils::DrawString(&context, ":P", 15, 80, -1, -1);
+#endif
 
 			EndPaint(hWnd, &paintstrct);
 		} break;

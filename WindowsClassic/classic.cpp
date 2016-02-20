@@ -1,7 +1,7 @@
 
 /*
 
-		SAME FILE FOR TESTING!
+		SAMPLE FILE FOR TESTING!
 
 */
 
@@ -21,6 +21,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 					LPSTR lpCmdLine,
 					int nCmdShow)
 {
+#if 0
 	HICON icon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINDOWS)),
 		  icon_small	= (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_WINDOWS), IMAGE_ICON, 16, 16, 0);
 
@@ -51,6 +52,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// window->SetMinimizable(false);	- Default = true
 
 	return window->CreateAndShow();
+#else
+	MessageBoxClassic(NULL, hInstance, "(Not used yet)", "Mah message bawx!");
+	return 0;
+#endif
 }
 
 void GlobalEventListener(CClassicComponent *source,

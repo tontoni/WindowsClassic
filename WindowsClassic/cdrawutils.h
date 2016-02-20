@@ -11,8 +11,6 @@ typedef struct
 
 	DWORD fill_color,
 		  draw_color;
-
-	HFONT font; // TODO(toni): Make use of custom context fonts!
 } DRAWCONTEXT;
 
 class CDrawUtils
