@@ -97,42 +97,49 @@ RECT CClassicWnd::AREA_GetMinimizeButtonBounds()
 
 CClassicWnd::CClassicWnd(HINSTANCE hInst, HICON icon, HICON icon_small)
 {
-	this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
-	this->wnd_class.style				= (CS_HREDRAW | CS_VREDRAW);
-	this->wnd_class.lpfnWndProc			= Internal_WndProc;
-	this->wnd_class.cbClsExtra			= 0;
-	this->wnd_class.cbWndExtra			= 0;
-	this->wnd_class.hInstance			= hInst;
-	this->wnd_class.hIcon				= icon;
-	this->wnd_class.hIconSm				= icon_small;
-	this->wnd_class.hCursor				= LoadCursor(NULL, IDC_ARROW);
-	this->wnd_class.hbrBackground		= this->classic_default_brush;
-	this->wnd_class.lpszMenuName		= NULL;
-	this->wnd_class.lpszClassName		= WND_CLASSNAME;
-
-	if (!RegisterClassEx(&this->wnd_class))
+	if (!GetClassInfoEx(hInst, WND_CLASSNAME, &this->wnd_class))
 	{
-		MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
-		return;
+		// If the class doesn't exist yet, create it!
+		this->wnd_class.cbSize					= sizeof(WNDCLASSEX);
+		this->wnd_class.style					= (CS_HREDRAW | CS_VREDRAW);
+		this->wnd_class.lpfnWndProc				= Internal_WndProc;
+		this->wnd_class.cbClsExtra				= 0;
+		this->wnd_class.cbWndExtra				= 0;
+		this->wnd_class.hInstance				= hInst;
+		this->wnd_class.hIcon					= icon;
+		this->wnd_class.hIconSm					= icon_small;
+		this->wnd_class.hCursor					= LoadCursor(NULL, IDC_ARROW);
+		this->wnd_class.hbrBackground			= this->classic_default_brush;
+		this->wnd_class.lpszMenuName			= NULL;
+		this->wnd_class.lpszClassName			= WND_CLASSNAME;
+
+		if (!RegisterClassEx(&this->wnd_class))
+		{
+			MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
+			return;
+		}
 	}
 
-	this->wnd_class_client.cbSize			= sizeof(WNDCLASSEX);
-	this->wnd_class_client.style			= (CS_HREDRAW | CS_VREDRAW);
-	this->wnd_class_client.lpfnWndProc		= Internal_WndProc_Client;
-	this->wnd_class_client.cbClsExtra		= 0;
-	this->wnd_class_client.cbWndExtra		= 0;
-	this->wnd_class_client.hInstance		= hInst;
-	this->wnd_class_client.hIcon			= NULL;
-	this->wnd_class_client.hIconSm			= NULL;
-	this->wnd_class_client.hCursor			= this->wnd_class.hCursor;
-	this->wnd_class_client.hbrBackground	= this->classic_default_brush;
-	this->wnd_class_client.lpszMenuName		= NULL;
-	this->wnd_class_client.lpszClassName	= WND_CLASSNAME_CLIENT;
-	
-	if (!RegisterClassEx(&this->wnd_class_client))
+	if (!GetClassInfoEx(hInst, WND_CLASSNAME_CLIENT, &this->wnd_class_client))
 	{
-		MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
-		return;
+		this->wnd_class_client.cbSize			= sizeof(WNDCLASSEX);
+		this->wnd_class_client.style			= (CS_HREDRAW | CS_VREDRAW);
+		this->wnd_class_client.lpfnWndProc		= Internal_WndProc_Client;
+		this->wnd_class_client.cbClsExtra		= 0;
+		this->wnd_class_client.cbWndExtra		= 0;
+		this->wnd_class_client.hInstance		= hInst;
+		this->wnd_class_client.hIcon			= NULL;
+		this->wnd_class_client.hIconSm			= NULL;
+		this->wnd_class_client.hCursor			= this->wnd_class.hCursor;
+		this->wnd_class_client.hbrBackground	= this->classic_default_brush;
+		this->wnd_class_client.lpszMenuName		= NULL;
+		this->wnd_class_client.lpszClassName	= WND_CLASSNAME_CLIENT;
+
+		if (!RegisterClassEx(&this->wnd_class_client))
+		{
+			MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
+			return;
+		}
 	}
 
 	this->__components = List_Create(256);

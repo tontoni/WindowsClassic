@@ -3,24 +3,29 @@
 
 __tagCClassicComponent::__tagCClassicComponent(HINSTANCE hInst, TSTRING name)
 {
-	this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
-	this->wnd_class.style				= (CS_HREDRAW | CS_VREDRAW);
-	this->wnd_class.lpfnWndProc			= Internal_WndProc;
-	this->wnd_class.cbClsExtra			= 0;
-	this->wnd_class.cbWndExtra			= 0;
-	this->wnd_class.hInstance			= hInst;
-	this->wnd_class.hIcon				= NULL;
-	this->wnd_class.hIconSm				= NULL;
-	this->wnd_class.hCursor				= LoadCursor(NULL, IDC_ARROW);
-	this->wnd_class.hbrBackground		= (HBRUSH)GetStockObject(WHITE_BRUSH);
-	this->wnd_class.lpszMenuName		= NULL;
-	this->wnd_class.lpszClassName		= name;
+	// If the given class does exist, retrieve it's information
+	// if not, create and register it
 
-	if ((!RegisterClassEx(&this->wnd_class)) && 
-		(GetLastError() != ERROR_CLASS_ALREADY_EXISTS))
+	if (!GetClassInfoEx(hInst, name, &this->wnd_class))
 	{
-		MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
-		return;
+		this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
+		this->wnd_class.style				= (CS_HREDRAW | CS_VREDRAW);
+		this->wnd_class.lpfnWndProc			= Internal_WndProc;
+		this->wnd_class.cbClsExtra			= 0;
+		this->wnd_class.cbWndExtra			= 0;
+		this->wnd_class.hInstance			= hInst;
+		this->wnd_class.hIcon				= NULL;
+		this->wnd_class.hIconSm				= NULL;
+		this->wnd_class.hCursor				= LoadCursor(NULL, IDC_ARROW);
+		this->wnd_class.hbrBackground		= (HBRUSH)GetStockObject(WHITE_BRUSH);
+		this->wnd_class.lpszMenuName		= NULL;
+		this->wnd_class.lpszClassName		= name;
+
+		if (!RegisterClassEx(&this->wnd_class))
+		{
+			MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
+			return;
+		}
 	}
 }
 
