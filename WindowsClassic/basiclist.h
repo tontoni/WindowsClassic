@@ -18,16 +18,8 @@
 
 #define LIST_DEFAULT_SIZE 0x00
 
-typedef struct
-{
-	T_PVOID data;
-} List_Entry;
-
-typedef struct
-{
-	T_INT32 size, count;
-	List_Entry *table;
-} BasicList;
+typedef struct __tagBasicList BasicList;
+typedef struct __tagListEntry List_Entry;
 
 C_EXTERN BasicList *List_Create(T_INT32 size);
 
@@ -36,21 +28,9 @@ C_INLINE BasicList *List_CreateDefault()
 	return List_Create(LIST_DEFAULT_SIZE);
 }
 
-C_INLINE T_INT32 List_GetSize(BasicList *list)
-{
-	if (!list)
-		return -1;
+C_EXTERN T_INT32 List_GetSize(BasicList *list);
 
-	return list->size;
-}
-
-C_INLINE T_INT32 List_GetCount(BasicList *list)
-{
-	if (!list)
-		return -1;
-
-	return list->count;
-}
+C_EXTERN T_INT32 List_GetCount(BasicList *list);
 
 C_EXTERN T_INT32 List_Contains(BasicList *list, T_PVOID data);
 

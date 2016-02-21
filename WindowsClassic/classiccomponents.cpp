@@ -33,6 +33,11 @@ __tagCClassicComponent::~__tagCClassicComponent()
 {
 }
 
+void __tagCClassicComponent::PostComponentMessage(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	SendMessage(this->hWnd, msg, wParam, lParam);
+}
+
 void __tagCClassicComponent::OnAdd(HWND parent)
 {
 	// Creating the HWND
@@ -131,8 +136,10 @@ void __tagCClassicComponent::SetPosition(int x, int y)
 		this,
 		this->hWnd,
 		this->bounds,
-		x, y,
-		-1, -1,
+		x, 
+		y,
+		MAKEWIDTH(this->bounds), 
+		MAKEHEIGHT(this->bounds), 
 		SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
 	);
 }
@@ -222,6 +229,13 @@ LRESULT CALLBACK __tagCClassicComponent::WndProc(HWND hWnd,
 		case WM_CREATE:
 		{
 			this->OnCreate();
+			SetFocus(hWnd);
+		} break;
+		case WM_ACTIVATE:
+		{
+			// If we get activated, not deactivated
+			if (wParam > 0)
+				SetFocus(hWnd);
 		} break;
 		case WM_PAINT:
 		{
@@ -254,6 +268,16 @@ LRESULT CALLBACK __tagCClassicComponent::WndProc(HWND hWnd,
 }
 
 
+////////////////////////////////////
+////	CCLASSICTEXTCOMPONENT	////
+////////////////////////////////////
+void __tagCClassicTextComponent::SetText(TSTRING text)
+{
+	this->text = text;
+	this->RepaintComponent();
+}
+
+
 ////////////////////////////
 ////	CCLASSICPANEL	////
 ////////////////////////////
@@ -267,12 +291,12 @@ void __tagCClassicPanel::OnCreate(void)
 {
 }
 
-void __tagCClassicPanel::PaintComponent(DRAWCONTEXT *context)
+void __tagCClassicPanel::PaintComponent(LPDRAWCONTEXT context)
 {
 	int width = MAKEWIDTH(context->paintstruct.rcPaint),
 		height = MAKEHEIGHT(context->paintstruct.rcPaint);
 
-	CDrawUtils::FillRectangle3D(context, 0, 0, width, height, this->raised);
+	CDrawUtils::FillRectangle3D(context, 0, 0, width, height, (this->raised) ? RECT_RAISED : 0);
 }
 
 LRESULT CALLBACK __tagCClassicPanel::HandleMessage(HWND hWnd,
@@ -285,47 +309,92 @@ LRESULT CALLBACK __tagCClassicPanel::HandleMessage(HWND hWnd,
 
 
 ////////////////////////////
-////	CCLASSICBUTTON	////
+////	CCLASSICICON	////
 ////////////////////////////
-void __tagCClassicButton::SetText(TSTRING text)
+void __tagCClassicIcon::SetIcon(HICON new_icon)
 {
-	this->button_text = text;
+	this->icon = new_icon;
 	this->RepaintComponent();
 }
 
-void __tagCClassicButton::OnCreate(void)
+void __tagCClassicIcon::OnCreate(void)
 {
 }
 
-void __tagCClassicButton::PaintComponent(DRAWCONTEXT *context)
+void __tagCClassicIcon::PaintComponent(LPDRAWCONTEXT context)
 {
 	int width = MAKEWIDTH(context->paintstruct.rcPaint),
 		height = MAKEHEIGHT(context->paintstruct.rcPaint);
 
-	CDrawUtils::FillRectangle3D(context, 0, 0, width, height, !this->pressed);
+	CDrawUtils::FillSolidRectangle(context, 0, 0, width, height);
+
+	if (this->icon)
+	{
+		DrawIconEx(
+			context->paintstruct.hdc, 
+			0, 
+			0, 
+			this->icon, 
+			width, 
+			height, 
+			0, 
+			NULL, 
+			DI_NORMAL
+		);
+	}
+}
+
+LRESULT CALLBACK __tagCClassicIcon::HandleMessage(HWND hWnd,
+													UINT message,
+													WPARAM wParam,
+													LPARAM lParam)
+{
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+
+////////////////////////////
+////	CCLASSICBUTTON	////
+////////////////////////////
+void __tagCClassicButton::OnCreate(void)
+{
+}
+
+void __tagCClassicButton::PaintComponent(LPDRAWCONTEXT context)
+{
+	int width = MAKEWIDTH(context->paintstruct.rcPaint),
+		height = MAKEHEIGHT(context->paintstruct.rcPaint);
+
+	bool focused = this->IsFocused();
+	UINT flags = (!this->pressed) ? RECT_RAISED : 0;
+
+	if (focused)
+		flags |= RECT_OUTLINED;
+
+	CDrawUtils::FillRectangle3D(context, 0, 0, width, height, flags);
 	
-	if (this->button_text)
+	if (this->text)
 	{
 		int offset = (this->pressed ? 1 : 0);
 
 		CDrawUtils::DrawString(
 			context, 
-			this->button_text, 
+			this->text, 
 			5 + offset,  
 			5 + offset, 
 			width - 10, 
-			height - 10, 
+			height - 12, 
 			DT_CENTER | DT_VCENTER | DT_SINGLELINE
 		);
 	}
 
-	if (GetFocus() == this->hWnd)
+	if (focused)
 	{
 		RECT bounds = {
-			context->paintstruct.rcPaint.left + 3, 
-			context->paintstruct.rcPaint.top + 3, 
-			context->paintstruct.rcPaint.right - 3, 
-			context->paintstruct.rcPaint.bottom - 3
+			context->paintstruct.rcPaint.left + 4, 
+			context->paintstruct.rcPaint.top + 4, 
+			context->paintstruct.rcPaint.right - 4, 
+			context->paintstruct.rcPaint.bottom - 4
 		};
 
 		// Thanks Micro$oft for that neat little function!
@@ -366,9 +435,64 @@ LRESULT CALLBACK  __tagCClassicButton::HandleMessage(HWND hWnd,
 
 			ReleaseCapture();
 		} break;
+		case WM_KEYDOWN:
+		{
+			short key_code = (short)wParam;
+
+			if (key_code == VK_RETURN)
+			{
+				if (this->event_listener)
+					this->event_listener(this, message, wParam, lParam);
+			}
+		} break;
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
 	return 0;
+}
+
+
+////////////////////////////
+////	CCLASSICLABEL	////
+////////////////////////////
+void __tagCClassicLabel::SetTextFormatFlags(UINT new_flags)
+{
+	this->format_flags = new_flags;
+	this->RepaintComponent();
+}
+
+void __tagCClassicLabel::OnCreate(void)
+{
+}
+
+void __tagCClassicLabel::PaintComponent(LPDRAWCONTEXT context)
+{
+	int width = MAKEWIDTH(context->paintstruct.rcPaint),
+		height = MAKEHEIGHT(context->paintstruct.rcPaint);
+
+	CDrawUtils::FillSolidRectangle(context, 0, 0, width, height);
+
+	if (this->text)
+	{
+		UINT format_flags = 0;
+
+		CDrawUtils::DrawString(
+			context, 
+			this->text, 
+			0, 
+			0, 
+			width, 
+			height, 
+			format_flags
+		);
+	}
+}
+
+LRESULT CALLBACK __tagCClassicLabel::HandleMessage(HWND hWnd,
+													UINT message,
+													WPARAM wParam,
+													LPARAM lParam)
+{
+	return DefWindowProc(hWnd, message, wParam, lParam);
 }

@@ -5,13 +5,16 @@
 #include <Windows.h>
 #include "types.h"
 
-typedef struct
+#define RECT_RAISED		0x0001
+#define RECT_OUTLINED	0x0002
+
+typedef struct __tagDRAWCONTEXT
 {
 	PAINTSTRUCT paintstruct;
 
 	DWORD fill_color,
 		  draw_color;
-} DRAWCONTEXT;
+} DRAWCONTEXT, *LPDRAWCONTEXT;
 
 class CDrawUtils
 {
@@ -22,31 +25,31 @@ class CDrawUtils
 		static DWORD			MakeColorBrighter(DWORD color, 
 													BYTE by_how_much);
 
-		static void				FillSolidRectangle(DRAWCONTEXT *context,
+		static void				FillSolidRectangle(LPDRAWCONTEXT context,
 													int x,
 													int y,
 													int w,
 													int h);
 
-		static void				FillPolygon(DRAWCONTEXT *context,
+		static void				FillPolygon(LPDRAWCONTEXT context,
 											const POINT *vectors,
 											int vector_cnt);
 
-		static void				FillRectangle3DSmall(DRAWCONTEXT *context,
+		static void				FillRectangle3DSmall(LPDRAWCONTEXT context,
 														int x,
 														int y,
 														int w,
 														int h, 
-														bool raised);
+														UINT flags);
 
-		static void				FillRectangle3D(DRAWCONTEXT *context,
+		static void				FillRectangle3D(LPDRAWCONTEXT context,
 												int x, 
 												int y, 
 												int w, 
 												int h, 
-												bool raised);
+												UINT flags);
 
-		static void				DrawString(DRAWCONTEXT *context,
+		static void				DrawString(LPDRAWCONTEXT context,
 											TSTRING string,
 											int x,
 											int y,

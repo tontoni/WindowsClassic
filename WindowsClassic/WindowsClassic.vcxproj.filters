@@ -35,6 +35,15 @@
     <Image Include="windows.ico">
       <Filter>Ressourcendateien</Filter>
     </Image>
+    <Image Include="error.ico">
+      <Filter>Ressourcendateien</Filter>
+    </Image>
+    <Image Include="info.ico">
+      <Filter>Ressourcendateien</Filter>
+    </Image>
+    <Image Include="warning.ico">
+      <Filter>Ressourcendateien</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">

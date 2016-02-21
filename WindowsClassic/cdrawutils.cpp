@@ -33,40 +33,41 @@ DWORD CDrawUtils::MakeColorBrighter(DWORD color,
 
 // This might not be the best function to draw a simple rectangle
 // but it should do for now.
-void CDrawUtils::FillSolidRectangle(DRAWCONTEXT *context,
+void CDrawUtils::FillSolidRectangle(LPDRAWCONTEXT context,
 									int x,
 									int y,
 									int w,
 									int h)
 {
-	RECT rect;
-	rect.left = x;
-	rect.top = y;
-	rect.right = x + w;
-	rect.bottom = y + h;
-	
 	SetDCBrushColor(context->paintstruct.hdc, context->fill_color);
-	FillRect(context->paintstruct.hdc, &rect, (HBRUSH)GetStockObject(DC_BRUSH));
+	SetDCPenColor(context->paintstruct.hdc, context->fill_color);
+
+	SelectObject(context->paintstruct.hdc, (HBRUSH)GetStockObject(DC_BRUSH));
+	SelectObject(context->paintstruct.hdc, (HPEN)GetStockObject(DC_PEN));
+
+	Rectangle(context->paintstruct.hdc, x, y, x + w, y + h);
 }
 
-void CDrawUtils::FillPolygon(DRAWCONTEXT *context,
+void CDrawUtils::FillPolygon(LPDRAWCONTEXT context,
 							const POINT *vectors,
 							int vector_cnt)
 {
+	// No we don't want any outline, Microsoft -.-
 	SetDCBrushColor(context->paintstruct.hdc, context->fill_color);
-	// SelectObject(context->paintstruct.hdc, brush);
+	SetDCPenColor(context->paintstruct.hdc, context->fill_color);
+
+	SelectObject(context->paintstruct.hdc, (HBRUSH)GetStockObject(DC_BRUSH));
+	SelectObject(context->paintstruct.hdc, (HPEN)GetStockObject(DC_PEN));
 
 	Polygon(context->paintstruct.hdc, vectors, vector_cnt);
-
-	// DeleteObject(brush);
 }
 
-void CDrawUtils::FillRectangle3DSmall(DRAWCONTEXT *context,
+void CDrawUtils::FillRectangle3DSmall(LPDRAWCONTEXT context,
 										int x,
 										int y,
 										int w,
 										int h, 
-										bool raised)
+										UINT flags)
 {
 	DWORD col_0 = 0xFFFFFF;	// Should always be white
 	DWORD col_1 = 0x000000; // Shadow - always black
@@ -75,6 +76,19 @@ void CDrawUtils::FillRectangle3DSmall(DRAWCONTEXT *context,
 
 	// Save the previous background color to restore it later
 	DWORD prev_bgr_col = context->fill_color;
+
+	bool raised = ((flags & RECT_RAISED) == RECT_RAISED);
+
+	if ((flags & RECT_OUTLINED) == RECT_OUTLINED)
+	{
+		context->fill_color = col_1;
+		FillSolidRectangle(context, x, y, w, h);
+
+		++x;
+		++y;
+		w -= 2;
+		h -= 2;
+	}
 
 	context->fill_color = (raised ? col_1 : col_0);
 	FillSolidRectangle(context, x    , y    , w    , h    );
@@ -92,19 +106,32 @@ void CDrawUtils::FillRectangle3DSmall(DRAWCONTEXT *context,
 	FillSolidRectangle(context, x + 2, y + 2, w - 4, h - 4);
 }
 
-void CDrawUtils::FillRectangle3D(DRAWCONTEXT *context,
+void CDrawUtils::FillRectangle3D(LPDRAWCONTEXT context,
 								int x, 
 								int y, 
 								int w, 
 								int h, 
-								bool raised)
+								UINT flags)
 {
-	DWORD col_0 = MakeColorBrighter(context->fill_color, 32); // 0xE0E0E0
-	DWORD col_1 = 0x000000;											// Shadow - should always be black no matter what
-	DWORD col_2 = 0xFFFFFF;											// Should always be white
-	DWORD col_3 = MakeColorDarker(context->fill_color, 64);	// 0x808080
+	DWORD col_0 = MakeColorBrighter(context->fill_color, 32);	// 0xE0E0E0
+	DWORD col_1 = 0x000000;										// Shadow - should always be black no matter what
+	DWORD col_2 = 0xFFFFFF;										// Should always be white
+	DWORD col_3 = MakeColorDarker(context->fill_color, 64);		// 0x808080
 
 	DWORD prev_bgr_col = context->fill_color;
+
+	bool raised = ((flags & RECT_RAISED) == RECT_RAISED);
+
+	if ((flags & RECT_OUTLINED) == RECT_OUTLINED)
+	{
+		context->fill_color = col_1;
+		FillSolidRectangle(context, x, y, w, h);
+
+		++x;
+		++y;
+		w -= 2;
+		h -= 2;
+	}
 
 	// First layer
 	context->fill_color = (raised ? col_1 : col_0);
@@ -123,7 +150,7 @@ void CDrawUtils::FillRectangle3D(DRAWCONTEXT *context,
 	FillSolidRectangle(context, x + 2, y + 2, w - 4, h - 4);
 }
 
-void CDrawUtils::DrawString(DRAWCONTEXT *context,
+void CDrawUtils::DrawString(LPDRAWCONTEXT context,
 							TSTRING string,
 							int x,
 							int y,

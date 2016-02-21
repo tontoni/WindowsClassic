@@ -6,6 +6,17 @@
 
 #define TABLE_STARTSIZE 1021
 
+struct __tagBasicList
+{
+	T_INT32 size, count;
+	List_Entry *table;
+};
+
+struct __tagListEntry
+{
+	T_PVOID data;
+};
+
 static bool isPrime(T_UINT64 val)
 {
 	T_INT32 i, p, exp, a;
@@ -81,7 +92,23 @@ BasicList *List_Create(T_INT32 size)
 	return list;
 }
 
-int List_Contains(BasicList *list, T_PVOID data)
+T_INT32 List_GetSize(BasicList *list)
+{
+	if (!list)
+		return -1;
+
+	return list->size;
+}
+
+T_INT32 List_GetCount(BasicList *list)
+{
+	if (!list)
+		return -1;
+
+	return list->count;
+}
+
+T_INT32 List_Contains(BasicList *list, T_PVOID data)
 {
 	for (T_INT32 i = 0; i < list->size; ++i)
 	{

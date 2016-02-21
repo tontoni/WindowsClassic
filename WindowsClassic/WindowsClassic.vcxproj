@@ -120,6 +120,9 @@
     <ClCompile Include="classiccomponents.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="error.ico" />
+    <Image Include="info.ico" />
+    <Image Include="warning.ico" />
     <Image Include="windows.ico" />
   </ItemGroup>
   <ItemGroup>

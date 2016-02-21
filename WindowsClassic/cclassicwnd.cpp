@@ -312,6 +312,12 @@ void CClassicWnd::SetClosable(bool closable)
 	this->RepaintWindow();
 }
 
+void CClassicWnd::SetCloseButtonEnabled(bool enabled)
+{
+	this->close_button_enabled = enabled;
+	this->RepaintWindow();
+}
+
 void CClassicWnd::SetResizable(bool resizable)
 {
 	this->resizable = resizable;
@@ -537,7 +543,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
 			context.draw_color = 0x000000;
 
-			CDrawUtils::FillRectangle3D(&context, 0, 0, width, height, true);
+			CDrawUtils::FillRectangle3D(&context, 0, 0, width, height, RECT_RAISED);
 
 			// Window titlebar drawcode
 
@@ -592,7 +598,35 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			if (this->closable)
 			{
 				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
-				CDrawUtils::FillRectangle3DSmall(&context, width - 21, 5, 16, 14, !pressed_button_close);
+				CDrawUtils::FillRectangle3DSmall(&context, width - 21, 5, 16, 14, (!pressed_button_close) ? RECT_RAISED : 0);
+
+				if (!this->close_button_enabled)
+				{
+					POINT x_pnt_3[4];
+					x_pnt_3[0].x = width - 16;
+					x_pnt_3[0].y = 9;
+					x_pnt_3[1].x = width - 15;
+					x_pnt_3[1].y = 9;
+					x_pnt_3[2].x = width - 10;
+					x_pnt_3[2].y = 15;
+					x_pnt_3[3].x = width - 9;
+					x_pnt_3[3].y = 15;
+
+					POINT x_pnt_4[4];
+					x_pnt_4[0].x = width - 9;
+					x_pnt_4[0].y = 9;
+					x_pnt_4[1].x = width - 10;
+					x_pnt_4[1].y = 9;
+					x_pnt_4[2].x = width - 15;
+					x_pnt_4[2].y = 15;
+					x_pnt_4[3].x = width - 16;
+					x_pnt_4[3].y = 15;
+
+					context.fill_color = 0xFFFFFF;
+
+					CDrawUtils::FillPolygon(&context, x_pnt_3, ARRAYSIZE(x_pnt_3));
+					CDrawUtils::FillPolygon(&context, x_pnt_4, ARRAYSIZE(x_pnt_4));
+				}
 
 				POINT x_pnt_1[4];
 				x_pnt_1[0].x = width - 17;
@@ -614,7 +648,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				x_pnt_2[3].x = width - 17;
 				x_pnt_2[3].y = 14;
 
-				context.fill_color = 0x000000;
+				context.fill_color = (this->close_button_enabled) ? 0x000000 : 0x808080;
 
 				CDrawUtils::FillPolygon(&context, x_pnt_1, ARRAYSIZE(x_pnt_1));
 				CDrawUtils::FillPolygon(&context, x_pnt_2, ARRAYSIZE(x_pnt_2));
@@ -625,7 +659,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				(this->minimizable))
 			{
 				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
-				CDrawUtils::FillRectangle3DSmall(&context, width - 39, 5, 16, 14, !this->pressed_button_maximize);
+				CDrawUtils::FillRectangle3DSmall(&context, width - 39, 5, 16, 14, (!this->pressed_button_maximize) ? RECT_RAISED : 0);
 
 				if (maximized)
 				{
@@ -672,7 +706,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			if (this->minimizable)
 			{
 				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
-				CDrawUtils::FillRectangle3DSmall(&context, width - 55, 5, 16, 14, !this->pressed_button_minimize);
+				CDrawUtils::FillRectangle3DSmall(&context, width - 55, 5, 16, 14, (!this->pressed_button_minimize) ? RECT_RAISED : 0);
 
 				context.fill_color = 0x000000;
 				CDrawUtils::FillSolidRectangle(&context, width - 51, 14, 6, 2);
@@ -686,7 +720,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				my = (int)((short)HIWORD(lParam));
 
 			// X button
-			if (IsPointOverCloseButton(mx, my, width, this->closable))
+			if (IsPointOverCloseButton(mx, my, width, (this->closable) && (this->close_button_enabled)))
 			{
 				this->pressed_button_close = true;
 				this->RepaintWindow();
@@ -965,6 +999,14 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			// Make the Window repaint
 			this->RepaintWindow();
+
+			for (int i = 0; 
+				i < List_GetCount(this->__components); 
+				++i)
+			{
+				CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
+				comp->PostComponentMessage(WM_ACTIVATE, wParam, lParam);
+			}
 		} break;
 		case WM_DESTROY:
 		{

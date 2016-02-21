@@ -23,9 +23,12 @@
 #define MAKERELATIVEPOSX(owner_bounds, target_bounds)		((target_bounds.right / 2) - (MAKEWIDTH(owner_bounds) / 2))
 #define MAKERELATIVEPOSY(owner_bounds, target_bounds)		((target_bounds.bottom / 2) - (MAKEHEIGHT(owner_bounds) / 2))
 
-typedef class __tagCClassicComponent	CClassicComponent;
-typedef class __tagCClassicPanel		CClassicPanel;
-typedef class __tagCClassicButton		CClassicButton;
+typedef class __tagCClassicComponent		CClassicComponent;
+typedef class __tagCClassicTextComponent	CClassicTextComponent;
+typedef class __tagCClassicPanel			CClassicPanel;
+typedef class __tagCClassicIcon				CClassicIcon;
+typedef class __tagCClassicButton			CClassicButton;
+typedef class __tagCClassicLabel			CClassicLabel;
 
 enum WindowEdge
 {
@@ -131,6 +134,7 @@ class CClassicWnd
 
 		void					SetTitle(TSTRING new_title);
 		void					SetClosable(bool closable);
+		void					SetCloseButtonEnabled(bool enabled);
 		void					SetResizable(bool resizable);
 		void					SetMinimizable(bool minimizable);
 		void					SetVisible(bool visible);
@@ -146,6 +150,7 @@ class CClassicWnd
 
 		inline bool				IsReady()						{ return ((this->hWnd) && (this->hWnd_client) && (this->visible)); }
 		inline bool				IsClosable()					{ return this->closable; }
+		inline bool				IsCloseButtonEnabled()			{ return this->close_button_enabled; }
 		inline bool				IsResizable()					{ return this->resizable; }
 		inline bool				IsMinimizable()					{ return this->minimizable; }
 		inline bool				IsVisible()						{ return this->visible; }
@@ -198,6 +203,7 @@ class CClassicWnd
 		// Various important flags...
 		bool					activated						= false, 
 								closable						= true, 
+								close_button_enabled			= true, 
 								resizable						= true, 
 								minimizable						= true, 
 								visible							= false, 
@@ -249,6 +255,8 @@ class __tagCClassicComponent
 		__tagCClassicComponent(HINSTANCE hInst, TSTRING name);
 		~__tagCClassicComponent();
 
+		void						PostComponentMessage(UINT msg, WPARAM wParam, LPARAM lParam);
+
 		void						OnAdd(HWND parent);
 		void						OnRemove(HWND parent);
 
@@ -257,7 +265,7 @@ class __tagCClassicComponent
 		//         :-)           //
 		///////////////////////////
 		virtual void				OnCreate(void) = 0;
-		virtual void				PaintComponent(DRAWCONTEXT *context) = 0;
+		virtual void				PaintComponent(LPDRAWCONTEXT context) = 0;
 
 		virtual LRESULT CALLBACK	HandleMessage(HWND hWnd, 
 													UINT message, 
@@ -292,6 +300,7 @@ class __tagCClassicComponent
 		void						RepaintComponent();
 
 		inline bool					IsReady() { return ((this->hWnd) && (this->visible)); }
+		inline bool					IsFocused() { return (GetFocus() == this->hWnd); }
 
 		LRESULT CALLBACK			WndProc(HWND hWnd, 
 											UINT message, 
@@ -313,6 +322,26 @@ class __tagCClassicComponent
 									visible = true;
 };
 
+//////////////////////////////////////
+//		Classic Text Component		//
+//////////////////////////////////////
+class __tagCClassicTextComponent : public CClassicComponent
+{
+	public:
+		inline __tagCClassicTextComponent(HINSTANCE hInst, TSTRING name, TSTRING text = NULL)
+						: CClassicComponent(hInst, name)
+		{
+			this->text = text;
+		}
+
+		inline ~__tagCClassicTextComponent() {}
+
+		void				SetText(TSTRING string);
+		inline TSTRING		GetText() { return this->text; }
+	protected:
+		TSTRING				text;
+};
+
 //////////////////////////////
 //		Classic Panel		//
 //////////////////////////////
@@ -331,7 +360,7 @@ class __tagCClassicPanel : public CClassicComponent
 		inline bool			IsRaised() { return this->raised; }
 
 		void				OnCreate(void);
-		void				PaintComponent(DRAWCONTEXT *context);
+		void				PaintComponent(LPDRAWCONTEXT context);
 
 		LRESULT CALLBACK	HandleMessage(HWND hWnd,
 											UINT message,
@@ -343,25 +372,48 @@ class __tagCClassicPanel : public CClassicComponent
 };
 
 //////////////////////////////
+//		Classic Icon		//
+//////////////////////////////
+class __tagCClassicIcon : public CClassicComponent
+{
+	public:
+		inline __tagCClassicIcon(HINSTANCE hInst, HICON icon = NULL)
+								: CClassicComponent(hInst, "ClassicIcon")
+		{
+			this->icon = icon;
+		}
+
+		inline ~__tagCClassicIcon() {}
+
+		void				SetIcon(HICON new_icon);
+		HICON				GetIcon() { return this->icon; };
+
+		void				OnCreate(void);
+		void				PaintComponent(LPDRAWCONTEXT context);
+
+		LRESULT CALLBACK	HandleMessage(HWND hWnd,
+											UINT message,
+											WPARAM wParam,
+											LPARAM lParam);
+	protected:
+		HICON				icon;
+};
+
+//////////////////////////////
 //		Classic Button		//
 //////////////////////////////
-class __tagCClassicButton : public CClassicComponent
+class __tagCClassicButton : public CClassicTextComponent
 {
 	public:
 		inline __tagCClassicButton(HINSTANCE hInst, TSTRING text = NULL)
-								: CClassicComponent(hInst, "ClassicButton")
+								: CClassicTextComponent(hInst, "ClassicButton", text)
 		{
-			this->button_text = text;
 		}
 
 		inline ~__tagCClassicButton() {}
 
-		void				SetText(TSTRING string);
-
-		inline TSTRING		GetText() { return this->button_text; }
-
 		void				OnCreate(void);
-		void				PaintComponent(DRAWCONTEXT *context);
+		void				PaintComponent(LPDRAWCONTEXT context);
 
 		LRESULT CALLBACK	HandleMessage(HWND hWnd,
 											UINT message,
@@ -369,9 +421,42 @@ class __tagCClassicButton : public CClassicComponent
 											LPARAM lParam);
 
 	protected:
-		TSTRING				button_text;
 		bool				pressed = false;
 };
+
+//////////////////////////////
+//		Classic Label		//
+//////////////////////////////
+class __tagCClassicLabel : public CClassicTextComponent
+{
+	public:
+		inline __tagCClassicLabel(HINSTANCE hInst, TSTRING text = NULL)
+								: CClassicTextComponent(hInst, "ClassicLabel", text)
+		{
+		}
+
+		inline ~__tagCClassicLabel() {}
+
+		void				SetTextFormatFlags(UINT new_flags);
+
+		void				OnCreate(void);
+		void				PaintComponent(LPDRAWCONTEXT context);
+
+		LRESULT CALLBACK	HandleMessage(HWND hWnd,
+											UINT message,
+											WPARAM wParam,
+											LPARAM lParam);
+	protected:
+		UINT				format_flags = 0;
+};
+
+SINLINE void EventListenerTest(CClassicComponent *source, 
+								UINT event, 
+								WPARAM wParam, 
+								LPARAM lParam)
+{
+	MessageBox(NULL, "Event went through", "Dux", 0);
+}
 
 SINLINE UINT MessageBoxClassic(HWND parent,
 								HINSTANCE hInst, 
@@ -388,7 +473,7 @@ SINLINE UINT MessageBoxClassic(HWND parent,
 
 	// Set the size first!
 	// Currently the size is only hardcoded, but i wanna make it dynamic eventually!
-	window->SetSize(223, 118);
+	window->SetSize(243, 118);
 
 	RECT parent_bounds;
 
@@ -396,16 +481,32 @@ SINLINE UINT MessageBoxClassic(HWND parent,
 	GetWindowRect((parent) ? parent : GetDesktopWindow(), &parent_bounds);
 	window->SetPositionRelativeTo(parent_bounds);
 
+	RECT client_bounds = window->GetClientBounds();
+
+	CClassicLabel *label_message = new CClassicLabel(hInst, message);
+	label_message->SetSize(170, 40);
+	label_message->SetPosition(56, 10);
+	label_message->SetTextFormatFlags(DT_CALCRECT);
+	
+	window->AddComponent(label_message);
+
+	CClassicIcon *icon_message = new CClassicIcon(hInst, icon);
+	icon_message->SetSize(32, 32);
+	icon_message->SetXPosition(14);
+	icon_message->SetYPositionRelativeTo(label_message->GetBounds());
+
+	window->AddComponent(icon_message);
+	
 	// Here i'll probably make different message box types for different purposes i the future!
 	// ( Yes No - Yes No Cancel - OK Cancel - OK - etc... )
 	// But for now this message box will only contain the infamous little "OK" button
 	CClassicButton *button_ok = new CClassicButton(hInst, "OK");
 	button_ok->SetSize(75, 23);
 
-	RECT client_bounds = window->GetClientBounds();
-
 	button_ok->SetXPositionRelativeTo(client_bounds);
-	button_ok->SetYPosition(client_bounds.bottom - 36);
+	button_ok->SetYPosition(client_bounds.bottom - 34);
+
+	button_ok->event_listener = EventListenerTest;
 
 	window->AddComponent(button_ok);
 

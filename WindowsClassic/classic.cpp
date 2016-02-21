@@ -53,7 +53,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	return window->CreateAndShow();
 #else
-	MessageBoxClassic(NULL, hInstance, "(Not used yet)", "Mah message bawx!");
+	MessageBoxClassic(NULL, hInstance, "My cool message in\na windows classic window yoooo!", "Mah message bawx!", LoadIcon(hInstance, MAKEINTRESOURCE(IDI_INFO_CLASSIC)));
 	return 0;
 #endif
 }
