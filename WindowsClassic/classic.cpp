@@ -16,26 +16,36 @@ static void GlobalEventListener(CClassicComponent *source,
 static CClassicButton *my_button, 
 					  *my_colored_button;
 
+static HINSTANCE hInst;
+static CClassicWnd *window;
+
 int WINAPI WinMain(HINSTANCE hInstance,
 					HINSTANCE hPrevInstance,
 					LPSTR lpCmdLine,
 					int nCmdShow)
 {
-#if 0
+	hInst = hInstance;
+
 	HICON icon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINDOWS)),
 		  icon_small	= (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_WINDOWS), IMAGE_ICON, 16, 16, 0);
 
-	CClassicWnd *window = new CClassicWnd(hInstance, icon, icon_small);
+	window = new CClassicWnd(
+		hInstance, 
+		"Windows_Classic_Window_Test", 
+		"Windows_Classic_Window_ClientArea_Test", 
+		icon, 
+		icon_small
+	);
 
 	window->SetTitle("Windows Classic Window OMG!");
-	window->SetPosition(200, 200);
 	window->SetSize(400, 300);
+	window->SetPosition(200, 200);
 
-	my_button = new CClassicButton(hInstance, "Hello! I\'m a button!");
+	my_button = new CClassicButton(hInstance, "Windows_Classic_Window_Button_1", "Hello! I\'m a button!");
 	my_button->SetBounds(10, 140, 160, 40);
 	my_button->event_listener = GlobalEventListener;
 
-	my_colored_button = new CClassicButton(hInstance, "And i\'m a colored button!");
+	my_colored_button = new CClassicButton(hInstance, "Windows_Classic_Window_Button_2", "And i\'m a colored button!");
 	my_colored_button->SetBounds(10, 200, 230, 30);
 
 	// Make it colorful!
@@ -52,10 +62,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// window->SetMinimizable(false);	- Default = true
 
 	return window->CreateAndShow();
-#else
-	MessageBoxClassic(NULL, hInstance, "My cool message in\na windows classic window yoooo!", "Mah message bawx!", LoadIcon(hInstance, MAKEINTRESOURCE(IDI_INFO_CLASSIC)));
-	return 0;
-#endif
 }
 
 void GlobalEventListener(CClassicComponent *source,
@@ -65,7 +71,17 @@ void GlobalEventListener(CClassicComponent *source,
 {
 	if (source == my_button) // Same address
 	{
-		MessageBox(NULL, "Clicked on button!", "Dux", NULL);
+#if 1
+		MessageBoxClassic(
+			NULL, 
+			hInst,
+			"My cool message in\na windows classic window yoooo!", 
+			"Mah message bawx!", 
+			MB_OK | MB_ICONINFORMATION
+		);
+#else
+		MessageBox(NULL, "Dux", "Dux", 0);
+#endif
 	}
 	else if (source == my_colored_button)
 	{

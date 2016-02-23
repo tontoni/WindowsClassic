@@ -3,29 +3,22 @@
 
 __tagCClassicComponent::__tagCClassicComponent(HINSTANCE hInst, TSTRING name)
 {
-	// If the given class does exist, retrieve it's information
-	// if not, create and register it
-
-	if (!GetClassInfoEx(hInst, name, &this->wnd_class))
+	this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
+	this->wnd_class.style				= (CS_HREDRAW | CS_VREDRAW);
+	this->wnd_class.lpfnWndProc			= Internal_WndProc;
+	this->wnd_class.cbClsExtra			= 0;
+	this->wnd_class.cbWndExtra			= 0;
+	this->wnd_class.hInstance			= hInst;
+	this->wnd_class.hIcon				= NULL;
+	this->wnd_class.hIconSm				= NULL;
+	this->wnd_class.hCursor				= LoadCursor(NULL, IDC_ARROW);
+	this->wnd_class.hbrBackground		= (HBRUSH)GetStockObject(WHITE_BRUSH);
+	this->wnd_class.lpszMenuName		= NULL;
+	this->wnd_class.lpszClassName		= name;
+	
+	if (!RegisterClassEx(&this->wnd_class))
 	{
-		this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
-		this->wnd_class.style				= (CS_HREDRAW | CS_VREDRAW);
-		this->wnd_class.lpfnWndProc			= Internal_WndProc;
-		this->wnd_class.cbClsExtra			= 0;
-		this->wnd_class.cbWndExtra			= 0;
-		this->wnd_class.hInstance			= hInst;
-		this->wnd_class.hIcon				= NULL;
-		this->wnd_class.hIconSm				= NULL;
-		this->wnd_class.hCursor				= LoadCursor(NULL, IDC_ARROW);
-		this->wnd_class.hbrBackground		= (HBRUSH)GetStockObject(WHITE_BRUSH);
-		this->wnd_class.lpszMenuName		= NULL;
-		this->wnd_class.lpszClassName		= name;
-
-		if (!RegisterClassEx(&this->wnd_class))
-		{
-			MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
-			return;
-		}
+		DBG_ErrorExit("Register WNDCLASSEX (Window component)");
 	}
 }
 
@@ -69,6 +62,7 @@ void __tagCClassicComponent::OnAdd(HWND parent)
 void __tagCClassicComponent::OnRemove(HWND parent)
 {
 	DestroyWindow(this->hWnd);
+	UnregisterClass(this->wnd_class.lpszClassName, this->wnd_class.hInstance);
 }
 
 // Private function

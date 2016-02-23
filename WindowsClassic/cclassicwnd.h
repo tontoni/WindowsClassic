@@ -23,6 +23,62 @@
 #define MAKERELATIVEPOSX(owner_bounds, target_bounds)		((target_bounds.right / 2) - (MAKEWIDTH(owner_bounds) / 2))
 #define MAKERELATIVEPOSY(owner_bounds, target_bounds)		((target_bounds.bottom / 2) - (MAKEHEIGHT(owner_bounds) / 2))
 
+#define CONTAINSFLAG(bitmask, flag)							((bitmask & flag) == flag )
+
+#define IsPointInArea(px, py, ax, ay, aw, ah)	\
+					((px >= ax) &&				\
+					 (py >= ay) &&				\
+					 (px < (ax + aw)) &&		\
+					 (py < (ay + ah)) )
+
+#ifdef _DEBUG // Debug routines
+	#include <strsafe.h>
+
+	SINLINE void __DBG_ErrorExit(TSTRING where)
+	{
+		LPVOID lpMsgBuf;
+		LPVOID lpDisplayBuf;
+		DWORD dw = GetLastError();
+
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			dw,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR)&lpMsgBuf,
+			0, NULL
+		);
+
+		// Display the error message and exit the process
+
+		lpDisplayBuf = (LPVOID)LocalAlloc(
+			LMEM_ZEROINIT,
+			(lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)where) + 64) * sizeof(TCHAR)
+		);
+
+		StringCchPrintf(
+			(LPTSTR)lpDisplayBuf,
+			(LocalSize(lpDisplayBuf) / sizeof(TCHAR)),
+			TEXT("%s failed with error %d:\n\n%s\n\nClick \"OK\" to exit the application."),
+			where, 
+			dw, 
+			lpMsgBuf
+		);
+
+		MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK | MB_ICONERROR);
+		
+		LocalFree(lpMsgBuf);
+		LocalFree(lpDisplayBuf);
+		ExitProcess(dw);
+	}
+
+	#define DBG_ErrorExit(where) __DBG_ErrorExit(where)
+#else
+	#define DBG_ErrorExit(where) MessageBox(NULL, where, TEXT("Error"), MB_OK | MB_ICONERROR)
+#endif
+
 typedef class __tagCClassicComponent		CClassicComponent;
 typedef class __tagCClassicTextComponent	CClassicTextComponent;
 typedef class __tagCClassicPanel			CClassicPanel;
@@ -42,21 +98,6 @@ enum WindowEdge
 	WE_BOTTOMRIGHT,
 	WE_BOTTOMBORDER
 };
-
-SINLINE bool IsPointInArea(int px,
-							int py,
-							int ax,
-							int ay,
-							int aw,
-							int ah)
-{
-	return (
-		(px >= ax) &&
-		(py >= ay) &&
-		(px < (ax + aw)) &&
-		(py < (ay + ah))
-	);
-}
 
 SINLINE HFONT CreateSimpleFont(HWND hWnd,
 								const TSTRING font_name, 
@@ -112,7 +153,12 @@ class CClassicWnd
 	RECT						AREA_GetMinimizeButtonBounds();
 
 	public:
-		CClassicWnd(HINSTANCE hInst, HICON icon = NULL, HICON icon_small = NULL);
+		CClassicWnd(HINSTANCE hInst, 
+					TSTRING wndclass_name, 
+					TSTRING wndclass_cl_name, 
+					HICON icon = NULL, 
+					HICON icon_small = NULL);
+
 		~CClassicWnd();
 
 		int						CreateAndShow(int xPos        = -1, 
@@ -133,6 +179,7 @@ class CClassicWnd
 		void					SetSize(int width, int height);
 
 		void					SetTitle(TSTRING new_title);
+		void					SetEnabled(bool enabled);
 		void					SetClosable(bool closable);
 		void					SetCloseButtonEnabled(bool enabled);
 		void					SetResizable(bool resizable);
@@ -148,7 +195,8 @@ class CClassicWnd
 		void					RepaintWindow();
 		void					RepaintClientArea();
 
-		inline bool				IsReady()						{ return ((this->hWnd) && (this->hWnd_client) && (this->visible)); }
+		inline bool				IsEnabled()						{ return this->enabled; }
+		inline bool				IsReady()						{ return ((this->hWnd) && (this->hWnd_client) /*&& (this->enabled)*/ && (this->visible)); }
 		inline bool				IsClosable()					{ return this->closable; }
 		inline bool				IsCloseButtonEnabled()			{ return this->close_button_enabled; }
 		inline bool				IsResizable()					{ return this->resizable; }
@@ -201,7 +249,8 @@ class CClassicWnd
 								prev_my							= 0;
 
 		// Various important flags...
-		bool					activated						= false, 
+		bool					enabled							= true, 
+								activated						= false, 
 								closable						= true, 
 								close_button_enabled			= true, 
 								resizable						= true, 
@@ -348,8 +397,8 @@ class __tagCClassicTextComponent : public CClassicComponent
 class __tagCClassicPanel : public CClassicComponent
 {
 	public:
-		inline __tagCClassicPanel(HINSTANCE hInst)
-								: CClassicComponent(hInst, "ClassicPanel")
+		inline __tagCClassicPanel(HINSTANCE hInst, TSTRING name)
+								: CClassicComponent(hInst, name)
 		{
 		}
 
@@ -377,8 +426,8 @@ class __tagCClassicPanel : public CClassicComponent
 class __tagCClassicIcon : public CClassicComponent
 {
 	public:
-		inline __tagCClassicIcon(HINSTANCE hInst, HICON icon = NULL)
-								: CClassicComponent(hInst, "ClassicIcon")
+		inline __tagCClassicIcon(HINSTANCE hInst, TSTRING name, HICON icon = NULL)
+								: CClassicComponent(hInst, name)
 		{
 			this->icon = icon;
 		}
@@ -405,8 +454,8 @@ class __tagCClassicIcon : public CClassicComponent
 class __tagCClassicButton : public CClassicTextComponent
 {
 	public:
-		inline __tagCClassicButton(HINSTANCE hInst, TSTRING text = NULL)
-								: CClassicTextComponent(hInst, "ClassicButton", text)
+		inline __tagCClassicButton(HINSTANCE hInst, TSTRING name, TSTRING text = NULL)
+								: CClassicTextComponent(hInst, name, text)
 		{
 		}
 
@@ -430,8 +479,8 @@ class __tagCClassicButton : public CClassicTextComponent
 class __tagCClassicLabel : public CClassicTextComponent
 {
 	public:
-		inline __tagCClassicLabel(HINSTANCE hInst, TSTRING text = NULL)
-								: CClassicTextComponent(hInst, "ClassicLabel", text)
+		inline __tagCClassicLabel(HINSTANCE hInst, TSTRING name, TSTRING text = NULL)
+								: CClassicTextComponent(hInst, name, text)
 		{
 		}
 
@@ -450,68 +499,10 @@ class __tagCClassicLabel : public CClassicTextComponent
 		UINT				format_flags = 0;
 };
 
-SINLINE void EventListenerTest(CClassicComponent *source, 
-								UINT event, 
-								WPARAM wParam, 
-								LPARAM lParam)
-{
-	MessageBox(NULL, "Event went through", "Dux", 0);
-}
-
-SINLINE UINT MessageBoxClassic(HWND parent,
-								HINSTANCE hInst, 
-								TSTRING message, 
-								TSTRING title, 
-								HICON icon = NULL)
-{
-	CClassicWnd *window = new CClassicWnd(hInst, NULL, NULL);
-
-	window->SetTitle(title);
-	
-	window->SetMinimizable(false);
-	window->SetResizable(false);
-
-	// Set the size first!
-	// Currently the size is only hardcoded, but i wanna make it dynamic eventually!
-	window->SetSize(243, 118);
-
-	RECT parent_bounds;
-
-	// If parent is NULL, just use the Desktop window
-	GetWindowRect((parent) ? parent : GetDesktopWindow(), &parent_bounds);
-	window->SetPositionRelativeTo(parent_bounds);
-
-	RECT client_bounds = window->GetClientBounds();
-
-	CClassicLabel *label_message = new CClassicLabel(hInst, message);
-	label_message->SetSize(170, 40);
-	label_message->SetPosition(56, 10);
-	label_message->SetTextFormatFlags(DT_CALCRECT);
-	
-	window->AddComponent(label_message);
-
-	CClassicIcon *icon_message = new CClassicIcon(hInst, icon);
-	icon_message->SetSize(32, 32);
-	icon_message->SetXPosition(14);
-	icon_message->SetYPositionRelativeTo(label_message->GetBounds());
-
-	window->AddComponent(icon_message);
-	
-	// Here i'll probably make different message box types for different purposes i the future!
-	// ( Yes No - Yes No Cancel - OK Cancel - OK - etc... )
-	// But for now this message box will only contain the infamous little "OK" button
-	CClassicButton *button_ok = new CClassicButton(hInst, "OK");
-	button_ok->SetSize(75, 23);
-
-	button_ok->SetXPositionRelativeTo(client_bounds);
-	button_ok->SetYPosition(client_bounds.bottom - 34);
-
-	button_ok->event_listener = EventListenerTest;
-
-	window->AddComponent(button_ok);
-
-	// TODO(toni): In the future this function should return the users decision(s)!
-	return (UINT)window->CreateAndShow();
-}
+extern int MessageBoxClassic(HWND parent,
+								HINSTANCE hInst,
+								TSTRING message,
+								TSTRING title,
+								UINT flags);
 
 #endif // _CCLASSICWND_H_

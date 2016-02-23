@@ -30,6 +30,9 @@
     <ClCompile Include="classiccomponents.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="messagebox.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="windows.ico">
@@ -42,6 +45,9 @@
       <Filter>Ressourcendateien</Filter>
     </Image>
     <Image Include="warning.ico">
+      <Filter>Ressourcendateien</Filter>
+    </Image>
+    <Image Include="question.ico">
       <Filter>Ressourcendateien</Filter>
     </Image>
   </ItemGroup>

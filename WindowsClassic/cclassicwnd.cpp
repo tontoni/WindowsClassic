@@ -52,9 +52,6 @@ static WindowEdge IsPointInWindowEdge(int px, int py, int win_width, int win_hei
 	return WE_NOTHING;
 }
 
-#define WND_CLASSNAME			"Windows_Classic_Window"
-#define WND_CLASSNAME_CLIENT	"Windows_Classic_Client"
-
 RECT CClassicWnd::AREA_GetTitlebarBounds()
 {
 	RECT bounds = { 
@@ -95,51 +92,46 @@ RECT CClassicWnd::AREA_GetMinimizeButtonBounds()
 	return bounds;
 }
 
-CClassicWnd::CClassicWnd(HINSTANCE hInst, HICON icon, HICON icon_small)
+CClassicWnd::CClassicWnd(HINSTANCE hInst, 
+						TSTRING wndclass_name, 
+						TSTRING wndclass_cl_name, 
+						HICON icon, 
+						HICON icon_small)
 {
-	if (!GetClassInfoEx(hInst, WND_CLASSNAME, &this->wnd_class))
-	{
-		// If the class doesn't exist yet, create it!
-		this->wnd_class.cbSize					= sizeof(WNDCLASSEX);
-		this->wnd_class.style					= (CS_HREDRAW | CS_VREDRAW);
-		this->wnd_class.lpfnWndProc				= Internal_WndProc;
-		this->wnd_class.cbClsExtra				= 0;
-		this->wnd_class.cbWndExtra				= 0;
-		this->wnd_class.hInstance				= hInst;
-		this->wnd_class.hIcon					= icon;
-		this->wnd_class.hIconSm					= icon_small;
-		this->wnd_class.hCursor					= LoadCursor(NULL, IDC_ARROW);
-		this->wnd_class.hbrBackground			= this->classic_default_brush;
-		this->wnd_class.lpszMenuName			= NULL;
-		this->wnd_class.lpszClassName			= WND_CLASSNAME;
+	this->wnd_class.cbSize					= sizeof(WNDCLASSEX);
+	this->wnd_class.style					= (CS_HREDRAW | CS_VREDRAW);
+	this->wnd_class.lpfnWndProc				= Internal_WndProc;
+	this->wnd_class.cbClsExtra				= 0;
+	this->wnd_class.cbWndExtra				= 0;
+	this->wnd_class.hInstance				= hInst;
+	this->wnd_class.hIcon					= icon;
+	this->wnd_class.hIconSm					= icon_small;
+	this->wnd_class.hCursor					= LoadCursor(NULL, IDC_ARROW);
+	this->wnd_class.hbrBackground			= this->classic_default_brush;
+	this->wnd_class.lpszMenuName			= NULL;
+	this->wnd_class.lpszClassName			= wndclass_name;
 
-		if (!RegisterClassEx(&this->wnd_class))
-		{
-			MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
-			return;
-		}
+	if (!RegisterClassEx(&this->wnd_class))
+	{
+		DBG_ErrorExit("Register WNDCLASSEX (Window)");
 	}
+	
+	this->wnd_class_client.cbSize			= sizeof(WNDCLASSEX);
+	this->wnd_class_client.style			= (CS_HREDRAW | CS_VREDRAW);
+	this->wnd_class_client.lpfnWndProc		= Internal_WndProc_Client;
+	this->wnd_class_client.cbClsExtra		= 0;
+	this->wnd_class_client.cbWndExtra		= 0;
+	this->wnd_class_client.hInstance		= hInst;
+	this->wnd_class_client.hIcon			= NULL;
+	this->wnd_class_client.hIconSm			= NULL;
+	this->wnd_class_client.hCursor			= this->wnd_class.hCursor;
+	this->wnd_class_client.hbrBackground	= this->classic_default_brush;
+	this->wnd_class_client.lpszMenuName		= NULL;
+	this->wnd_class_client.lpszClassName	= wndclass_cl_name;
 
-	if (!GetClassInfoEx(hInst, WND_CLASSNAME_CLIENT, &this->wnd_class_client))
+	if (!RegisterClassEx(&this->wnd_class_client))
 	{
-		this->wnd_class_client.cbSize			= sizeof(WNDCLASSEX);
-		this->wnd_class_client.style			= (CS_HREDRAW | CS_VREDRAW);
-		this->wnd_class_client.lpfnWndProc		= Internal_WndProc_Client;
-		this->wnd_class_client.cbClsExtra		= 0;
-		this->wnd_class_client.cbWndExtra		= 0;
-		this->wnd_class_client.hInstance		= hInst;
-		this->wnd_class_client.hIcon			= NULL;
-		this->wnd_class_client.hIconSm			= NULL;
-		this->wnd_class_client.hCursor			= this->wnd_class.hCursor;
-		this->wnd_class_client.hbrBackground	= this->classic_default_brush;
-		this->wnd_class_client.lpszMenuName		= NULL;
-		this->wnd_class_client.lpszClassName	= WND_CLASSNAME_CLIENT;
-
-		if (!RegisterClassEx(&this->wnd_class_client))
-		{
-			MessageBox(NULL, "Call to RegisterClassEx failed!", "Win32", NULL);
-			return;
-		}
+		DBG_ErrorExit("Register WNDCLASSEX (Window Client Area)");
 	}
 
 	this->__components = List_Create(256);
@@ -156,7 +148,7 @@ int CClassicWnd::CreateAndShow(int xPos,
 								TSTRING title)
 {
 	this->hWnd = CreateWindow(
-		WND_CLASSNAME,
+		this->wnd_class.lpszClassName,
 		(!title) ? this->__title : title,
 		WS_POPUP,
 		(xPos < 0) ? this->__bounds.left : xPos, 
@@ -171,7 +163,7 @@ int CClassicWnd::CreateAndShow(int xPos,
 
 	if (!this->hWnd)
 	{
-		MessageBox(NULL, "Call to CreateWindow failed!", "Win32", NULL);
+		DBG_ErrorExit("Create HWND (Window)");
 		return 1;
 	}
 
@@ -193,6 +185,17 @@ int CClassicWnd::CreateAndShow(int xPos,
 		DispatchMessage(&msg);
 	}
 	
+	// Post Cleanup
+	UnregisterClass(
+		this->wnd_class_client.lpszClassName, 
+		this->wnd_class_client.hInstance
+	);
+
+	UnregisterClass(
+		this->wnd_class.lpszClassName, 
+		this->wnd_class.hInstance
+	);
+
 	return (int)msg.wParam;
 }
 
@@ -260,8 +263,10 @@ void CClassicWnd::SetPosition(int xPos, int yPos)
 		this,
 		this->hWnd,
 		this->__bounds,
-		xPos, yPos,
-		-1, -1,
+		xPos, 
+		yPos,
+		MAKEWIDTH(this->__bounds), 
+		MAKEHEIGHT(this->__bounds), 
 		SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
 	);
 }
@@ -303,6 +308,18 @@ void CClassicWnd::SetTitle(TSTRING new_title)
 		return;
 
 	SetWindowText(this->hWnd, new_title);
+	this->RepaintWindow();
+}
+
+void CClassicWnd::SetEnabled(bool enabled)
+{
+	this->enabled = enabled;
+
+	if (!this->IsReady())
+		return;
+
+	EnableWindow(this->hWnd, enabled);
+	EnableWindow(this->hWnd_client, enabled);
 	this->RepaintWindow();
 }
 
@@ -452,6 +469,7 @@ void CClassicWnd::RemoveAll()
 	{
 		CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
 		comp->OnRemove(this->hWnd_client);
+		free(comp);
 	}
 
 	List_Clear(this->__components);
@@ -481,7 +499,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			// TODO(toni): Probably gonna change this in the future...
 
 			this->hWnd_client = CreateWindow(
-				WND_CLASSNAME_CLIENT,
+				this->wnd_class_client.lpszClassName,
 				NULL, 
 				WS_CHILD | WS_VISIBLE,
 				3, 
@@ -496,7 +514,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			
 			if (!this->hWnd_client)
 			{
-				MessageBox(NULL, "Call to CreateWindow failed!", "Win32", NULL);
+				DBG_ErrorExit("Create HWND (Window Client Area)");
 				return 1;
 			}
 			
@@ -1052,7 +1070,18 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 		} break;
 		case WM_DESTROY:
 		{
-			this->RemoveAll();
+			// Destroying all the components too?
+			// I don't really know, but for now we just do it, so that we don't waste any memory!
+			// Though, the remaining pointer addresses should not be reused, but there is no way to make sure that
+			// they're all zeroed out!
+			for (int i = 0; 
+				i < List_GetCount(this->__components); 
+				++i)
+			{
+				CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
+				comp->OnRemove(hWnd);
+				free(comp);
+			}
 
 			DeleteList(this->__components);
 			this->__components = NULL;
