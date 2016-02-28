@@ -469,8 +469,6 @@ void __tagCClassicLabel::PaintComponent(LPDRAWCONTEXT context)
 
 	if (this->text)
 	{
-		UINT format_flags = 0;
-
 		CDrawUtils::DrawString(
 			context, 
 			this->text, 
@@ -478,7 +476,7 @@ void __tagCClassicLabel::PaintComponent(LPDRAWCONTEXT context)
 			0, 
 			width, 
 			height, 
-			format_flags
+			this->format_flags
 		);
 	}
 }

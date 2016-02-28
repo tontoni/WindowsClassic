@@ -1,6 +1,6 @@
 
 #include "cdrawutils.h"
-#include "types.h"
+#include "utils.h"
 
 // Color Bitmask: ( Blue | Green | Red )
 DWORD CDrawUtils::MakeColorDarker(DWORD color, 
@@ -77,10 +77,15 @@ void CDrawUtils::FillRectangle3DSmall(LPDRAWCONTEXT context,
 	// Save the previous background color to restore it later
 	DWORD prev_bgr_col = context->fill_color;
 
-	bool raised = ((flags & RECT_RAISED) == RECT_RAISED);
+	bool raised = (flags & RECT_RAISED);
 
-	if ((flags & RECT_OUTLINED) == RECT_OUTLINED)
+	if (raised)
+		flags &= ~RECT_RAISED;
+
+	if (flags & RECT_OUTLINED)
 	{
+		flags &= ~RECT_OUTLINED;
+
 		context->fill_color = col_1;
 		FillSolidRectangle(context, x, y, w, h);
 
@@ -120,10 +125,15 @@ void CDrawUtils::FillRectangle3D(LPDRAWCONTEXT context,
 
 	DWORD prev_bgr_col = context->fill_color;
 
-	bool raised = ((flags & RECT_RAISED) == RECT_RAISED);
+	bool raised = (flags & RECT_RAISED);
 
-	if ((flags & RECT_OUTLINED) == RECT_OUTLINED)
+	if (raised)
+		flags &= ~RECT_RAISED;
+
+	if (flags & RECT_OUTLINED)
 	{
+		flags &= ~RECT_OUTLINED;
+
 		context->fill_color = col_1;
 		FillSolidRectangle(context, x, y, w, h);
 
@@ -170,10 +180,10 @@ void CDrawUtils::DrawString(LPDRAWCONTEXT context,
 		bounds.right = (x + width);
 		bounds.bottom = (y + height);
 
-		DrawText(context->paintstruct.hdc, string, StrLen(string), &bounds, text_format);
+		DrawText(context->paintstruct.hdc, string, StrLenA(string), &bounds, text_format);
 	}
 	else
 	{
-		TextOut(context->paintstruct.hdc, x, y, string, StrLen(string));
+		TextOut(context->paintstruct.hdc, x, y, string, StrLenA(string));
 	}
 }

@@ -1,5 +1,40 @@
 
 #include "cclassicwnd.h"
+#include "utils.h"
+
+static inline LONGLONG GetSystemTime()
+{
+	LARGE_INTEGER s_freq;
+	BOOL s_use_qpc = QueryPerformanceFrequency(&s_freq);
+
+	if (s_use_qpc)
+	{
+		LARGE_INTEGER time;
+		QueryPerformanceCounter(&time);
+		return (1000LL * time.QuadPart) / s_freq.QuadPart;
+	}
+	else
+	{
+		return GetTickCount();
+	}
+}
+
+TSTRING GenerateNewClassName(TSTRING prefix)
+{
+	TCHAR buffer[64];
+	LONGLONG sys_time = GetSystemTime();
+
+	// Make sure that our name is REALLY unique!
+	// (Sorry but i can't think of a better solution :P)
+	sys_time *= (LONGLONG)(rand() % 10000);
+
+	sprintf(buffer, "%s_%I64d", prefix, sys_time);
+
+	TSTRING class_name = (TSTRING)malloc(sizeof(TCHAR) * StrLenA(buffer));
+	strcpy(class_name, buffer);
+
+	return class_name;
+}
 
 #define IsPointOverTitlebar(mx, my, width)							(IsPointInArea(mx, my, 3, 3, width - 57, 18))
 #define IsPointOverCloseButton(mx, my, width, wnd_closable)			(IsPointInArea(mx, my, width - 21, 5, 16, 14)) && (wnd_closable)
@@ -92,11 +127,11 @@ RECT CClassicWnd::AREA_GetMinimizeButtonBounds()
 	return bounds;
 }
 
-CClassicWnd::CClassicWnd(HINSTANCE hInst, 
-						TSTRING wndclass_name, 
-						TSTRING wndclass_cl_name, 
-						HICON icon, 
-						HICON icon_small)
+CClassicWnd::__tagCClassicWnd(HINSTANCE hInst,
+								TSTRING wndclass_name, 
+								TSTRING wndclass_cl_name, 
+								HICON icon, 
+								HICON icon_small)
 {
 	this->wnd_class.cbSize					= sizeof(WNDCLASSEX);
 	this->wnd_class.style					= (CS_HREDRAW | CS_VREDRAW);
@@ -134,7 +169,11 @@ CClassicWnd::CClassicWnd(HINSTANCE hInst,
 		DBG_ErrorExit("Register WNDCLASSEX (Window Client Area)");
 	}
 
+	this->__window_listeners = List_Create(64);
 	this->__components = List_Create(256);
+
+	this->font_titlebar = CreateSimpleFontIndependent("MS Sans Serif", 8, FW_BOLD);
+	this->font_element = CreateSimpleFontIndependent("MS Sans Serif", 8);
 }
 
 CClassicWnd::~CClassicWnd()
@@ -447,6 +486,26 @@ SIZE CClassicWnd::GetClientSize()
 	return s;
 }
 
+HDC CClassicWnd::GetWindowDrawContext()
+{
+	return GetDC(this->hWnd);
+}
+
+HDC CClassicWnd::GetDrawContext()
+{
+	return GetDC(this->hWnd_client);
+}
+
+void CClassicWnd::ReleaseWindowDrawContext(HDC hdc)
+{
+	ReleaseDC(this->hWnd, hdc);
+}
+
+void CClassicWnd::ReleaseDrawContext(HDC hdc)
+{
+	ReleaseDC(this->hWnd_client, hdc);
+}
+
 void CClassicWnd::AddComponent(CClassicComponent *component)
 {
 	List_Add(this->__components, component);
@@ -475,6 +534,21 @@ void CClassicWnd::RemoveAll()
 	List_Clear(this->__components);
 }
 
+void CClassicWnd::AddWindowListener(WINDOWLISTENER listener)
+{
+	List_Add(this->__window_listeners, listener);
+}
+
+void CClassicWnd::RemoveWindowListener(WINDOWLISTENER listener)
+{
+	List_Remove(this->__window_listeners, listener);
+}
+
+void CClassicWnd::RemoveAllWindowListeners()
+{
+	List_Clear(this->__window_listeners);
+}
+
 LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd, 
 										UINT message, 
 										WPARAM wParam, 
@@ -493,8 +567,8 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 	{
 		case WM_CREATE:
 		{
-			this->font_titlebar = CreateSimpleFont(hWnd, "MS Sans Serif", 8, FW_BOLD);
-			this->font_element = CreateSimpleFont(hWnd, "MS Sans Serif", 8);
+			// this->font_titlebar = CreateSimpleFont(hWnd, "MS Sans Serif", 8, FW_BOLD);
+			// this->font_element = CreateSimpleFont(hWnd, "MS Sans Serif", 8);
 
 			// TODO(toni): Probably gonna change this in the future...
 
@@ -1030,6 +1104,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 		{
 			DeleteObject(this->font_element);
 			DeleteObject(this->font_titlebar);
+			DeleteObject(this->classic_default_brush);
 
 			PostQuitMessage(0);
 		} break;
@@ -1037,6 +1112,15 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 		{
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
+	}
+
+	// We got to notify all the window listeners (if there are some)
+	for (int i = 0; 
+		i < List_GetCount(this->__window_listeners); 
+		++i)
+	{
+		WINDOWLISTENER listener = (WINDOWLISTENER)List_Get(this->__window_listeners, i);
+		listener(this, message, wParam, lParam);
 	}
 
 	return 0;
@@ -1070,10 +1154,14 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 		} break;
 		case WM_DESTROY:
 		{
+			DeleteList(this->__window_listeners);
+			this->__window_listeners = NULL;
+
 			// Destroying all the components too?
 			// I don't really know, but for now we just do it, so that we don't waste any memory!
 			// Though, the remaining pointer addresses should not be reused, but there is no way to make sure that
 			// they're all zeroed out!
+			// So just don't re-use the same addresses.
 			for (int i = 0; 
 				i < List_GetCount(this->__components); 
 				++i)

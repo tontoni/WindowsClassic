@@ -2,11 +2,13 @@
 #ifndef _CDRAWUTILS_H_
 #define _CDRAWUTILS_H_
 
+#pragma once
+
 #include <Windows.h>
 #include "types.h"
 
-#define RECT_RAISED		0x0001
-#define RECT_OUTLINED	0x0002
+#define RECT_RAISED		1
+#define RECT_OUTLINED	2
 
 typedef struct __tagDRAWCONTEXT
 {

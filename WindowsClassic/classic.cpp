@@ -71,16 +71,30 @@ void GlobalEventListener(CClassicComponent *source,
 {
 	if (source == my_button) // Same address
 	{
+		const TSTRING message = (
+			"Do line breaks work?\n\
+			Sure they do.\n \n\
+			Blablablablablablablablablabla This is some long sample text blablablablablablablablablabla\n \n\
+			The dialog box should automatically adjust it\'s size to the text inside this label"
+		);
+
+		const TSTRING title = "Mah message bawx!";
+
 #if 1
 		MessageBoxClassic(
 			NULL, 
 			hInst,
-			"My cool message in\na windows classic window yoooo!", 
-			"Mah message bawx!", 
-			MB_OK | MB_ICONINFORMATION
+			message, 
+			title, 
+			MB_OKCANCEL | MB_ICONINFORMATION
 		);
 #else
-		MessageBox(NULL, "Dux", "Dux", 0);
+		MessageBox(
+			NULL, 
+			message, 
+			title, 
+			MB_OKCANCEL | MB_ICONINFORMATION
+		);
 #endif
 	}
 	else if (source == my_colored_button)

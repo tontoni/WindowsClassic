@@ -4,17 +4,17 @@
  */
 
 #include "cclassicwnd.h"
+#include "utils.h"
 #include "resource.h"
 
-typedef struct
+typedef struct __tagMSGBOXINFO
 {
 	HWND			parent;
 	HINSTANCE		hInstance;
 	TSTRING			message, 
 					title;
-	HICON			icon;
 
-	UINT			creation_flags;
+	DWORD			creation_flags;
 
 	DWORD			thread_id;
 	HANDLE			thread_handle;
@@ -29,48 +29,30 @@ static void MessageBoxEventListener(CClassicComponent *source,
 
 static DWORD WINAPI MessageBoxWorker(LPVOID param);
 
-int MessageBoxClassic(HWND parent,
+int MessageBoxClassicA(HWND parent,
 						HINSTANCE hInst,
 						TSTRING message,
 						TSTRING title,
-						UINT flags)
+						DWORD flags)
 {
 	DWORD thread_id;
 	HANDLE thread_handle;
 
 	LPMSGBOXINFO info		= (LPMSGBOXINFO)malloc(sizeof(MSGBOXINFO));
+
+	// Zero memory
+	memset(info, 0, sizeof(MSGBOXINFO));
+
 	info->parent			= parent;
 	info->hInstance			= hInst;
 	info->message			= message;
 	info->title				= title;
 	info->creation_flags	= flags;
-
-	// Check for icons
-	if (CONTAINSFLAG(flags, MB_ICONHAND))
-	{
-		info->icon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ERROR_CLASSIC));
-	}
-	else if (CONTAINSFLAG(flags, MB_ICONQUESTION))
-	{
-		info->icon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_QUESTION_CLASSIC));
-	}
-	else if (CONTAINSFLAG(flags, MB_ICONEXCLAMATION))
-	{
-		info->icon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_WARNING_CLASSIC));
-	}
-	else if (CONTAINSFLAG(flags, MB_ICONASTERISK))
-	{
-		info->icon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_INFO_CLASSIC));
-	}
-	else
-	{
-		info->icon = NULL; // NULL tells the dialog to not add any icon component to the window
-	}
 	
-	thread_handle = CreateThread(NULL, 0, MessageBoxWorker, info, 0, &thread_id);
+	thread_handle			= CreateThread(NULL, 0, MessageBoxWorker, info, 0, &thread_id);
 
-	info->thread_id		= thread_id;
-	info->thread_handle = thread_handle;
+	info->thread_id			= thread_id;
+	info->thread_handle		= thread_handle;
 
 	// We gotta wait until the thread terminates
 	WaitForSingleObject(thread_handle, INFINITE);
@@ -83,87 +65,305 @@ int MessageBoxClassic(HWND parent,
 	return result;
 }
 
+HICON CheckAndLoadIcon(LPMSGBOXINFO info)
+{
+	switch (info->creation_flags & MB_ICONMASK)
+	{
+		// Error Icon
+		case MB_ICONHAND:
+		{
+			return LoadIcon(info->hInstance, MAKEINTRESOURCE(IDI_ERROR_CLASSIC));
+		}
+		// Question Icon
+		case MB_ICONQUESTION:
+		{
+			return LoadIcon(info->hInstance, MAKEINTRESOURCE(IDI_QUESTION_CLASSIC));
+		}
+		// Warning Icon
+		case MB_ICONEXCLAMATION:
+		{
+			return LoadIcon(info->hInstance, MAKEINTRESOURCE(IDI_WARNING_CLASSIC));
+		}
+		// Info Icon
+		case MB_ICONASTERISK:
+		{
+			return LoadIcon(info->hInstance, MAKEINTRESOURCE(IDI_INFO_CLASSIC));
+		}
+		default:
+		{
+			break;
+		}
+	}
+
+	return (HICON)NULL; // NULL = No icon
+}
+
+bool HandleMsgBoxTypes(LPMSGBOXINFO info, 
+						LPCClassicWnd window)
+{
+	RECT client_bounds = window->GetClientBounds();
+
+	switch (info->creation_flags & MB_TYPEMASK)
+	{
+		// Adding the different message box buttons
+		case MB_OK:
+		{
+			CClassicButton *button_ok = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"OK"
+			);
+
+			button_ok->SetSize(75, 23);
+
+			button_ok->SetXPositionRelativeTo(client_bounds);
+			button_ok->SetYPosition(client_bounds.bottom - 34);
+
+			button_ok->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_ok);
+
+			return true;
+		}
+		case MB_OKCANCEL:
+		{
+			int center_x = (client_bounds.right / 2);
+
+			CClassicButton *button_cancel = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Cancel"
+			);
+
+			button_cancel->SetSize(75, 23);
+
+			button_cancel->SetXPosition(center_x + 3);
+			button_cancel->SetYPosition(client_bounds.bottom - 34);
+
+			button_cancel->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_cancel);
+
+			CClassicButton *button_ok = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"OK"
+			);
+
+			button_ok->SetSize(75, 23);
+
+			button_ok->SetXPosition(center_x - 78);
+			button_ok->SetYPosition(client_bounds.bottom - 34);
+
+			button_ok->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_ok);
+			
+			return true;
+		}
+		case MB_ABORTRETRYIGNORE:
+		{
+			// TODO(toni): Handle this type!
+			return true;
+		}
+		case MB_YESNOCANCEL:
+		{
+			// TODO(toni): Handle this type!
+			return true;
+		}
+		case MB_YESNO:
+		{
+			int center_x = (client_bounds.right / 2);
+
+			CClassicButton *button_no = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"No"
+			);
+
+			button_no->SetSize(75, 23);
+
+			button_no->SetXPosition(center_x + 3);
+			button_no->SetYPosition(client_bounds.bottom - 34);
+
+			button_no->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_no);
+
+			CClassicButton *button_yes = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Yes"
+			);
+
+			button_yes->SetSize(75, 23);
+
+			button_yes->SetXPosition(center_x - 78);
+			button_yes->SetYPosition(client_bounds.bottom - 34);
+
+			button_yes->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_yes);
+
+			return true;
+		}
+		case MB_RETRYCANCEL:
+		{
+			int center_x = (client_bounds.right / 2);
+
+			CClassicButton *button_cancel = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Cancel"
+			);
+
+			button_cancel->SetSize(75, 23);
+
+			button_cancel->SetXPosition(center_x + 3);
+			button_cancel->SetYPosition(client_bounds.bottom - 34);
+
+			button_cancel->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_cancel);
+
+			CClassicButton *button_retry = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Retry"
+			);
+
+			button_retry->SetSize(75, 23);
+
+			button_retry->SetXPosition(center_x - 78);
+			button_retry->SetYPosition(client_bounds.bottom - 34);
+
+			button_retry->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_retry);
+
+			return true;
+		}
+		case MB_CANCELTRYCONTINUE:
+		{
+			// TODO(toni): Handle this type!
+			return true;
+		}
+		default:
+		{
+			break;
+		}
+	}
+
+	return false;
+}
+
 DWORD WINAPI MessageBoxWorker(LPVOID param)
 {
 	LPMSGBOXINFO info = (LPMSGBOXINFO)param;
-
-	// TODO(toni): Generate unique window class names for each element!
-	// (Get rid of the "Some_message_box_..." stuff!)
-	CClassicWnd *window = new CClassicWnd(info->hInstance, "Some_message_box", "Some_message_box_clientarea");
+	
+	CClassicWnd *window = new CClassicWnd(
+		info->hInstance, 
+		GenerateNewClassName("MSGBOX_Classic_Window"), 
+		GenerateNewClassName("MSGBOX_Classic_Client")
+	);
 
 	window->SetTitle(info->title);
 
 	window->SetMinimizable(false);
 	window->SetResizable(false);
 
-	// Set the size first!
-	// Currently the size is only hardcoded, but i wanna make it dynamic eventually!
-	window->SetSize(243, 118);
+	CClassicLabel *label_message = new CClassicLabel(
+		info->hInstance, 
+		GenerateNewClassName(), 
+		info->message
+	);
+	
+	// A temporary draw context which covers all available monitors
+	// we just use it to compute the size of the message label
+	HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
 
+	// Selecting our font, so that the metrics are correct
+	SelectObject(temp_dc, window->GetFont());
+
+	int label_w = 0,
+		label_h = 0;
+
+	TSTRING token = _strdup(info->message);
+	token = strtok(token, "\n");
+
+	if (token)
+	{
+		while (token)
+		{
+			SIZE ln_size;
+			GetTextExtentPoint32(temp_dc, token, StrLenA(token), &ln_size);
+
+			if (label_w < ln_size.cx)
+				label_w = ln_size.cx;
+
+			label_h += ln_size.cy;
+
+			token = strtok(NULL, "\n");
+		}
+	}
+	else
+	{
+		// If the message is only one line, just use the entire message
+		SIZE msg_size;
+		GetTextExtentPoint32(temp_dc, info->message, StrLenA(info->message), &msg_size);
+
+		label_w = msg_size.cx;
+		label_h = msg_size.cy;
+	}
+
+	// Getting rid of the draw context that we created earlier...
+	DeleteDC(temp_dc);
+
+	label_message->SetSize(label_w, label_h);
+	label_message->SetPosition(59, 11);
+	label_message->SetTextFormatFlags(DT_WORDBREAK);
+
+	// Finally setting the size of the window
+	window->SetSize(label_w + 84, label_h + 92);
+
+	window->AddComponent(label_message);
+
+	// Check for an icon
+	HICON box_icon = CheckAndLoadIcon(info);
+
+	if (box_icon)
+	{
+		// If an icon has been loaded somehow...
+
+		CClassicIcon *icon_message = new CClassicIcon(
+			info->hInstance, 
+			GenerateNewClassName(),
+			box_icon
+		);
+
+		icon_message->SetSize(32, 32);
+		icon_message->SetPosition(11, 11);
+
+		window->AddComponent(icon_message);
+	}
+
+	// If this operation fails, the user passed in an invalid or unknown flag!
+	if (!HandleMsgBoxTypes(info, window))
+	{
+		SetLastError(ERROR_INVALID_DATA);
+		DBG_ErrorExit("Message box creation (Worker thread)");
+
+		return ERROR_INVALID_DATA;
+	}
+	
 	RECT parent_bounds;
 
 	// If parent is NULL, just use the Desktop window
 	GetWindowRect((info->parent) ? info->parent : GetDesktopWindow(), &parent_bounds);
 	window->SetPositionRelativeTo(parent_bounds);
 
-	RECT client_bounds = window->GetClientBounds();
-
-	CClassicLabel *label_message = new CClassicLabel(info->hInstance, "Some_message_box_label", info->message);
-	label_message->SetSize(170, 40);
-	label_message->SetPosition(56, 10);
-	label_message->SetTextFormatFlags(DT_CALCRECT);
-
-	window->AddComponent(label_message);
-
-	if (info->icon)
-	{
-		CClassicIcon *icon_message = new CClassicIcon(info->hInstance, "Some_message_box_icon", info->icon);
-		icon_message->SetSize(32, 32);
-		icon_message->SetXPosition(14);
-		icon_message->SetYPositionRelativeTo(label_message->GetBounds());
-
-		window->AddComponent(icon_message);
-	}
-
-	// Here i'll probably make different message box types for different purposes i the future!
-	// ( Yes No - Yes No Cancel - OK Cancel - OK - etc... )
-	// But for now this message box will only contain the infamous little "OK" button
-
-	if (CONTAINSFLAG(info->creation_flags, MB_ABORTRETRYIGNORE))
-	{
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_CANCELTRYCONTINUE))
-	{
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_HELP))
-	{
-		// Dunno if we should ever use this...
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_OK))
-	{
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_OKCANCEL))
-	{
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_RETRYCANCEL))
-	{
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_YESNO))
-	{
-	}
-	else if (CONTAINSFLAG(info->creation_flags, MB_YESNOCANCEL))
-	{
-	}
-
-	CClassicButton *button_ok = new CClassicButton(info->hInstance, "Some_message_box_button", "OK");
-	button_ok->SetSize(75, 23);
-
-	button_ok->SetXPositionRelativeTo(client_bounds);
-	button_ok->SetYPosition(client_bounds.bottom - 34);
-
-	button_ok->event_listener = MessageBoxEventListener;
-
-	window->AddComponent(button_ok);
+	// TODO(toni): Maybe we'll implement our own "Windows Classic" themed beep sounds
+	MessageBeep(info->creation_flags & MB_ICONMASK);
 
 	window->CreateAndShow();
 

@@ -6,6 +6,8 @@
 
 #include <tchar.h>
 
+#define SINLINE				static inline
+
 typedef char				T_INT8;
 typedef short				T_INT16;
 typedef int					T_INT32;
@@ -28,17 +30,11 @@ typedef void *				T_PVOID;
 
 typedef TCHAR *				TSTRING;
 
-static inline T_UINT32 StrLen(TSTRING string)
-{
-	T_UINT32 len = 0;
-
-	while (*string != '\0')
-	{
-		++string;
-		++len;
-	}
-
-	return len;
-}
+// Unicode support (currently not really used though)
+#if (defined(UNICODE)) || (defined(_UNICODE))
+	#include <wchar.h>
+	
+	typedef WCHAR *				WSTRING;
+#endif // UNICODE || _UNICODE
 
 #endif // _TYPES_H_

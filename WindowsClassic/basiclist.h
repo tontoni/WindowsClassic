@@ -14,6 +14,8 @@
 #define C_INLINE static inline
 #endif
 
+#pragma once
+
 #include "types.h"
 
 #define LIST_DEFAULT_SIZE 0x00

@@ -10,8 +10,6 @@
 #include "cdrawutils.h"
 #include "basiclist.h"
 
-#define SINLINE static inline
-
 #define CLASSIC_DEFAULT_BASECOLOR							(DWORD)0xC0C0C0
 
 #define MAKESIZE(a, b)										(a - b)
@@ -22,8 +20,6 @@
 
 #define MAKERELATIVEPOSX(owner_bounds, target_bounds)		((target_bounds.right / 2) - (MAKEWIDTH(owner_bounds) / 2))
 #define MAKERELATIVEPOSY(owner_bounds, target_bounds)		((target_bounds.bottom / 2) - (MAKEHEIGHT(owner_bounds) / 2))
-
-#define CONTAINSFLAG(bitmask, flag)							((bitmask & flag) == flag )
 
 #define IsPointInArea(px, py, ax, ay, aw, ah)	\
 					((px >= ax) &&				\
@@ -76,15 +72,29 @@
 
 	#define DBG_ErrorExit(where) __DBG_ErrorExit(where)
 #else
-	#define DBG_ErrorExit(where) MessageBox(NULL, where, TEXT("Error"), MB_OK | MB_ICONERROR)
+	#define DBG_ErrorExit(where)	\
+	{								\
+		MessageBox(					\
+			NULL,					\
+			where,					\
+			TEXT("Error"),			\
+			MB_OK | MB_ICONERROR	\
+		);							\
+									\
+		ExitProcess(1);				\
+	}
 #endif
 
-typedef class __tagCClassicComponent		CClassicComponent;
-typedef class __tagCClassicTextComponent	CClassicTextComponent;
-typedef class __tagCClassicPanel			CClassicPanel;
-typedef class __tagCClassicIcon				CClassicIcon;
-typedef class __tagCClassicButton			CClassicButton;
-typedef class __tagCClassicLabel			CClassicLabel;
+typedef class __tagCClassicWnd				CClassicWnd,			*LPCClassicWnd;
+typedef class __tagCClassicComponent		CClassicComponent,		*LPCClassicComponent;
+typedef class __tagCClassicTextComponent	CClassicTextComponent,	*LPCClassicTextComponent;
+typedef class __tagCClassicPanel			CClassicPanel,			*LPCClassicPanel;
+typedef class __tagCClassicIcon				CClassicIcon,			*LPCClassicIcon;
+typedef class __tagCClassicButton			CClassicButton,			*LPCClassicButton;
+typedef class __tagCClassicLabel			CClassicLabel,			*LPCClassicLabel;
+
+typedef void(*WINDOWLISTENER)(LPCClassicWnd, UINT, WPARAM, LPARAM);
+typedef void(*EVENTLISTENER)(LPCClassicComponent, UINT, WPARAM, LPARAM);
 
 enum WindowEdge
 {
@@ -99,13 +109,11 @@ enum WindowEdge
 	WE_BOTTOMBORDER
 };
 
-SINLINE HFONT CreateSimpleFont(HWND hWnd,
-								const TSTRING font_name, 
-								const long font_size, 
-								LONG font_weight = FW_NORMAL)
+SINLINE HFONT CreateSimpleFontFromDC(HDC hdc, 
+									const TSTRING font_name, 
+									const long font_size, 
+									LONG font_weight = FW_NORMAL)
 {
-	HDC hdc = GetDC(hWnd);
-
 	LOGFONT logfont = { 0 };
 	logfont.lfHeight = -MulDiv(font_size, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 	logfont.lfWeight = font_weight;
@@ -114,12 +122,35 @@ SINLINE HFONT CreateSimpleFont(HWND hWnd,
 
 	HFONT font = CreateFontIndirect(&logfont);
 
+	return font;
+}
+
+SINLINE HFONT CreateSimpleFontIndependent(const TSTRING font_name,
+											const long font_size, 
+											LONG font_weight = FW_NORMAL)
+{
+	HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
+	HFONT font = CreateSimpleFontFromDC(temp_dc, font_name, font_size, font_weight);
+	DeleteDC(temp_dc);
+
+	return font;
+}
+
+SINLINE HFONT CreateSimpleFont(HWND hWnd,
+								const TSTRING font_name, 
+								const long font_size, 
+								LONG font_weight = FW_NORMAL)
+{
+	HDC hdc = GetDC(hWnd);
+	HFONT font = CreateSimpleFontFromDC(hdc, font_name, font_size, font_weight);
 	ReleaseDC(hWnd, hdc);
 
 	return font;
 }
 
-class CClassicWnd
+extern TSTRING GenerateNewClassName(TSTRING prefix = "Classic");
+
+class __tagCClassicWnd
 {
 	SINLINE LRESULT CALLBACK Internal_WndProc(HWND hWnd,
 												UINT message,
@@ -147,19 +178,25 @@ class CClassicWnd
 		return window->WndProc_Client(hWnd, message, wParam, lParam);
 	}
 
+	////////////////////////////////////////////////////////////////////////
+	/////// ! NOTE: THE CRAPPY MICROSOFT INTELLISENSE MAY COMPLAIN ! ///////
+	/////// ! ABOUT NOT FINDING THE DEFINITION FOR THE FUNCTIONS   ! ///////
+	/////// ! BELOW. BUT DON'T BELIEVE IT, BECAUSE IT'S LYING      ! ///////
+	////////////////////////////////////////////////////////////////////////
+
 	RECT						AREA_GetTitlebarBounds();
 	RECT						AREA_GetCloseButtonBounds();
 	RECT						AREA_GetMaximizeButtonBounds();
 	RECT						AREA_GetMinimizeButtonBounds();
 
 	public:
-		CClassicWnd(HINSTANCE hInst, 
-					TSTRING wndclass_name, 
-					TSTRING wndclass_cl_name, 
-					HICON icon = NULL, 
-					HICON icon_small = NULL);
+		__tagCClassicWnd(HINSTANCE hInst, 
+						TSTRING wndclass_name, 
+						TSTRING wndclass_cl_name, 
+						HICON icon = NULL, 
+						HICON icon_small = NULL);
 
-		~CClassicWnd();
+		~__tagCClassicWnd();
 
 		int						CreateAndShow(int xPos        = -1, 
 												int yPos      = -1, 
@@ -220,6 +257,16 @@ class CClassicWnd
 		HFONT					GetTitlebarFont()				{ return this->font_titlebar; }
 		HFONT					GetFont()						{ return this->font_element; }
 
+		HDC						GetWindowDrawContext();
+		HDC						GetDrawContext();
+
+		void					ReleaseWindowDrawContext(HDC hdc);
+		void					ReleaseDrawContext(HDC hdc);
+
+		void					AddWindowListener(WINDOWLISTENER listener);
+		void					RemoveWindowListener(WINDOWLISTENER listener);
+		void					RemoveAllWindowListeners();
+
 		void					AddComponent(CClassicComponent *component);
 		void					RemoveComponent(CClassicComponent *component);
 		void					RemoveAll();
@@ -265,6 +312,7 @@ class CClassicWnd
 
 		WindowEdge				resize_edge						= WE_NOTHING;
 
+		BasicList				*__window_listeners				= NULL;
 		BasicList				*__components					= NULL;
 
 		LRESULT CALLBACK		WndProc(HWND hWnd,
@@ -281,7 +329,6 @@ class CClassicWnd
 //////////////////////////////////////
 //		Component Main Class		//
 //////////////////////////////////////
-typedef void (*EVENTLISTENER)(CClassicComponent *, UINT, WPARAM, LPARAM);
 
 class __tagCClassicComponent
 {
@@ -499,10 +546,17 @@ class __tagCClassicLabel : public CClassicTextComponent
 		UINT				format_flags = 0;
 };
 
-extern int MessageBoxClassic(HWND parent,
+extern int MessageBoxClassicA(HWND parent,
 								HINSTANCE hInst,
 								TSTRING message,
 								TSTRING title,
-								UINT flags);
+								DWORD flags);
+
+#if (defined(UNICODE)) || (defined(_UNICODE))
+	// TODO(toni): Implement Unicode support...?
+#else
+	#define MessageBoxClassic(parent, hInst, message, title, flags) \
+			MessageBoxClassicA(parent, hInst, message, title, flags)
+#endif
 
 #endif // _CCLASSICWND_H_
