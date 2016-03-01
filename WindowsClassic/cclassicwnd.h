@@ -550,7 +550,7 @@ extern int MessageBoxClassicA(HWND parent,
 								HINSTANCE hInst,
 								TSTRING message,
 								TSTRING title,
-								DWORD flags);
+								UINT flags);
 
 #if (defined(UNICODE)) || (defined(_UNICODE))
 	// TODO(toni): Implement Unicode support...?
@@ -558,5 +558,43 @@ extern int MessageBoxClassicA(HWND parent,
 	#define MessageBoxClassic(parent, hInst, message, title, flags) \
 			MessageBoxClassicA(parent, hInst, message, title, flags)
 #endif
+
+//////////////////////////////////////////////////////////////////
+// Okay so i've decided to make the popup menu API structure	//
+// similar to Windows'. I know it might be stupid not to use	//
+// Classes like as i did for the other GUI Elements, but		//
+// i think it's quite okay. After all, the goal here is to		//
+// sort of re-create a part of the old Win32 API. Plus			//
+// there is really not that much to those little Popup Menus.	//
+// They're very straightforward.								//
+//////////////////////////////////////////////////////////////////
+
+typedef struct CLASSICPOPUP			*HPOPUP;
+typedef struct CLASSICMENUITEM		*HMENUITEM;
+
+// ClassicPopupMenu
+#define CPM_CREATE					0x00
+#define CPM_SHOW					0x01
+#define CPM_SELECTITEM				0x02
+#define CPM_DESTROY					0x03
+
+#define CPM_ITEM_TYPEMASK			0x0000000FL
+#define CPM_ITEM_TEXT				0x00000000L
+// TODO(toni): Not implemented yet
+#define CPM_ITEM_ICONTEXT			0x00000001L
+#define CPM_ITEM_SEPARATOR			0x00000002L
+
+typedef void(*CLASSIC_MENU_PROC)	(HPOPUP, UINT, LPVOID);
+
+extern HPOPUP		CreatePopupMenuClassic(HINSTANCE hInst);
+extern bool			ShowPopupMenuClassic(HPOPUP popup);
+extern HMENUITEM	CreateMenuItem(UINT style, LPVOID param);
+extern void			SetMenuItemUserdata(HMENUITEM item, LPVOID data);
+extern LPVOID		GetMenuItemUserdata(HMENUITEM item);
+extern void			AppendMenuItemClassic(HPOPUP popup, HMENUITEM item);
+extern void			InsertMenuItemClassic(HPOPUP popup, HMENUITEM item, int index);
+extern void			RemoveMenuItemClassic(HPOPUP popup, HMENUITEM item);
+extern void			RemoveMenuitemClassicByIndex(HPOPUP popup, int index);
+extern void			DestroyMenuItem(HMENUITEM item);
 
 #endif // _CCLASSICWND_H_

@@ -131,6 +131,7 @@
     <ClCompile Include="classic.cpp" />
     <ClCompile Include="classiccomponents.cpp" />
     <ClCompile Include="messagebox.cpp" />
+    <ClCompile Include="popup.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>

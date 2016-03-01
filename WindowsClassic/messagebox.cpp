@@ -14,7 +14,7 @@ typedef struct __tagMSGBOXINFO
 	TSTRING			message, 
 					title;
 
-	DWORD			creation_flags;
+	UINT			creation_flags;
 
 	DWORD			thread_id;
 	HANDLE			thread_handle;
@@ -33,7 +33,7 @@ int MessageBoxClassicA(HWND parent,
 						HINSTANCE hInst,
 						TSTRING message,
 						TSTRING title,
-						DWORD flags)
+						UINT flags)
 {
 	DWORD thread_id;
 	HANDLE thread_handle;

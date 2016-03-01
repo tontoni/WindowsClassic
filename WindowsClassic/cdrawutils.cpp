@@ -78,14 +78,9 @@ void CDrawUtils::FillRectangle3DSmall(LPDRAWCONTEXT context,
 	DWORD prev_bgr_col = context->fill_color;
 
 	bool raised = (flags & RECT_RAISED);
-
-	if (raised)
-		flags &= ~RECT_RAISED;
-
+	
 	if (flags & RECT_OUTLINED)
 	{
-		flags &= ~RECT_OUTLINED;
-
 		context->fill_color = col_1;
 		FillSolidRectangle(context, x, y, w, h);
 
@@ -126,14 +121,9 @@ void CDrawUtils::FillRectangle3D(LPDRAWCONTEXT context,
 	DWORD prev_bgr_col = context->fill_color;
 
 	bool raised = (flags & RECT_RAISED);
-
-	if (raised)
-		flags &= ~RECT_RAISED;
-
+	
 	if (flags & RECT_OUTLINED)
 	{
-		flags &= ~RECT_OUTLINED;
-
 		context->fill_color = col_1;
 		FillSolidRectangle(context, x, y, w, h);
 

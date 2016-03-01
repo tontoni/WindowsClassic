@@ -412,8 +412,8 @@ LRESULT CALLBACK  __tagCClassicButton::HandleMessage(HWND hWnd,
 		} break;
 		case WM_LBUTTONUP:
 		{
-			int mx = (int)LOWORD(lParam),
-				my = (int)HIWORD(lParam);
+			int mx = (int)((short)LOWORD(lParam)),
+				my = (int)((short)HIWORD(lParam));
 
 			RECT wnd_bounds;
 			GetWindowRect(hWnd, &wnd_bounds);

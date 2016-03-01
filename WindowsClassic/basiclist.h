@@ -20,8 +20,8 @@
 
 #define LIST_DEFAULT_SIZE 0x00
 
-typedef struct __tagBasicList BasicList;
-typedef struct __tagListEntry List_Entry;
+typedef struct __tagBasicList		BasicList,		*LPBasicList;
+typedef struct __tagListEntry		List_Entry,		*LPList_Entry;
 
 C_EXTERN BasicList *List_Create(T_INT32 size);
 

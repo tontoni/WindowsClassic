@@ -101,5 +101,9 @@ void GlobalEventListener(CClassicComponent *source,
 	{
 		my_colored_button->SetBackgroundColor(0x000000);
 		my_colored_button->SetText("Whoops! And now \'m black!");
+
+		HPOPUP popup = CreatePopupMenuClassic(hInst);
+		AppendMenuItemClassic(popup, CreateMenuItem(CPM_ITEM_TEXT, "Test item"));
+		ShowPopupMenuClassic(popup);
 	}
 }

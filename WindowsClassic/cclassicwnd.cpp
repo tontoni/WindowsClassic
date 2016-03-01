@@ -913,7 +913,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 		} break;
 		case WM_MOUSEMOVE:
 		{
-			int mx = (int)((short)LOWORD(lParam)), 
+			int mx = (int)((short)LOWORD(lParam)),
 				my = (int)((short)HIWORD(lParam));
 
 			// If the window currently isn't being dragged and maximized...
@@ -961,12 +961,6 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				mx = (wnd_bounds.left - prev_mx) + mx;
 				my = (wnd_bounds.top - prev_my) + my;
 
-				POINT cl_pos;
-				cl_pos.x = mx;
-				cl_pos.y = my;
-
-				ClientToScreen(hWnd, &cl_pos);
-				
 				this->SetPosition(mx, my);
 			}
 			// Resize the Window
