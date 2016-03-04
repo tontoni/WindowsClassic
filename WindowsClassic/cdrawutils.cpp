@@ -77,7 +77,7 @@ void CDrawUtils::FillRectangle3DSmall(LPDRAWCONTEXT context,
 	// Save the previous background color to restore it later
 	DWORD prev_bgr_col = context->fill_color;
 
-	bool raised = (flags & RECT_RAISED);
+	UINT raised = (flags & RECT_RAISED);
 	
 	if (flags & RECT_OUTLINED)
 	{
@@ -120,7 +120,7 @@ void CDrawUtils::FillRectangle3D(LPDRAWCONTEXT context,
 
 	DWORD prev_bgr_col = context->fill_color;
 
-	bool raised = (flags & RECT_RAISED);
+	UINT raised = (flags & RECT_RAISED);
 	
 	if (flags & RECT_OUTLINED)
 	{

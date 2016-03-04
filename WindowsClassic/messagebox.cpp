@@ -3,7 +3,7 @@
  * Message Box API
  */
 
-#include "cclassicwnd.h"
+#include "windowsclassic.h"
 #include "utils.h"
 #include "resource.h"
 
@@ -163,7 +163,54 @@ bool HandleMsgBoxTypes(LPMSGBOXINFO info,
 		}
 		case MB_ABORTRETRYIGNORE:
 		{
-			// TODO(toni): Handle this type!
+			int center_x = (client_bounds.right / 2);
+			int btn_wh = (75 / 2);
+
+			CClassicButton *button_ignore = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Ignore"
+			);
+
+			button_ignore->SetSize(75, 23);
+
+			button_ignore->SetXPosition(center_x + (btn_wh + 3));
+			button_ignore->SetYPosition(client_bounds.bottom - 34);
+
+			button_ignore->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_ignore);
+
+			CClassicButton *button_retry = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Retry"
+			);
+
+			button_retry->SetSize(75, 23);
+
+			button_retry->SetXPosition(center_x - btn_wh);
+			button_retry->SetYPosition(client_bounds.bottom - 34);
+
+			button_retry->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_retry);
+			
+			CClassicButton *button_abort = new CClassicButton(
+				info->hInstance,
+				GenerateNewClassName(),
+				"Abort"
+			);
+
+			button_abort->SetSize(75, 23);
+
+			button_abort->SetXPosition(center_x - (78 + btn_wh));
+			button_abort->SetYPosition(client_bounds.bottom - 34);
+
+			button_abort->event_listener = MessageBoxEventListener;
+
+			window->AddComponent(button_abort);
+
 			return true;
 		}
 		case MB_YESNOCANCEL:

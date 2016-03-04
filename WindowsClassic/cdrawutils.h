@@ -7,8 +7,8 @@
 #include <Windows.h>
 #include "types.h"
 
-#define RECT_RAISED		1
-#define RECT_OUTLINED	2
+#define RECT_RAISED		0x0000000FL
+#define RECT_OUTLINED	0x000000F0L
 
 typedef struct __tagDRAWCONTEXT
 {

@@ -1,5 +1,5 @@
 
-#include "cclassicwnd.h"
+#include "windowsclassic.h"
 
 __tagCClassicComponent::__tagCClassicComponent(HINSTANCE hInst, TSTRING name)
 {
@@ -303,6 +303,59 @@ LRESULT CALLBACK __tagCClassicPanel::HandleMessage(HWND hWnd,
 
 
 ////////////////////////////
+////	CCLASSICBITMAP	////
+////////////////////////////
+void __tagCClassicBitmap::SetBitmap(HBITMAP new_bitmap)
+{
+	this->bitmap = new_bitmap;
+	this->RepaintComponent();
+}
+
+void __tagCClassicBitmap::SetBitmapPosition(int x, int y)
+{
+	this->bitmap_pos.x = x;
+	this->bitmap_pos.y = y;
+}
+
+void __tagCClassicBitmap::OnCreate(void)
+{
+}
+
+void __tagCClassicBitmap::PaintComponent(LPDRAWCONTEXT context)
+{
+	HDC bitmap_buffer = CreateCompatibleDC(context->paintstruct.hdc);
+	SelectObject(bitmap_buffer, this->bitmap);
+
+	int w = context->paintstruct.rcPaint.right,
+		h = context->paintstruct.rcPaint.bottom;
+
+	StretchBlt(
+		context->paintstruct.hdc, 
+		this->bitmap_pos.x,
+		this->bitmap_pos.y,
+		w, 
+		h,
+		bitmap_buffer, 
+		0, 
+		0, 
+		w,
+		h,
+		SRCCOPY
+	);
+
+	DeleteDC(bitmap_buffer);
+}
+
+LRESULT CALLBACK __tagCClassicBitmap::HandleMessage(HWND hWnd,
+													UINT message,
+													WPARAM wParam,
+													LPARAM lParam)
+{
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+
+////////////////////////////
 ////	CCLASSICICON	////
 ////////////////////////////
 void __tagCClassicIcon::SetIcon(HICON new_icon)
@@ -371,15 +424,19 @@ void __tagCClassicButton::PaintComponent(LPDRAWCONTEXT context)
 	{
 		int offset = (this->pressed ? 1 : 0);
 
+		SetBkMode(context->paintstruct.hdc, TRANSPARENT);
+
 		CDrawUtils::DrawString(
 			context, 
 			this->text, 
-			5 + offset,  
-			5 + offset, 
-			width - 10, 
-			height - 12, 
+			offset + 1,  
+			offset, 
+			width - 2, 
+			height - 2, 
 			DT_CENTER | DT_VCENTER | DT_SINGLELINE
 		);
+
+		SetBkMode(context->paintstruct.hdc, OPAQUE);
 	}
 
 	if (focused)

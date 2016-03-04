@@ -12,8 +12,12 @@
 
 # Build results
 [Dd]ebug/
+[Dd]ebug (Classic Test)/
+[Dd]ebug (RealWinVer)/
 [Dd]ebugPublic/
 [Rr]elease/
+[Rr]elease (Classic Test)/
+[Rr]elease (RealWinVer)/
 [Rr]eleases/
 x64/
 x86/

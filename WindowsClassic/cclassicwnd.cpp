@@ -1,6 +1,8 @@
 
-#include "cclassicwnd.h"
+#include "windowsclassic.h"
 #include "utils.h"
+
+#include <stdio.h>
 
 static inline LONGLONG GetSystemTime()
 {
@@ -36,10 +38,17 @@ TSTRING GenerateNewClassName(TSTRING prefix)
 	return class_name;
 }
 
-#define IsPointOverTitlebar(mx, my, width)							(IsPointInArea(mx, my, 3, 3, width - 57, 18))
-#define IsPointOverCloseButton(mx, my, width, wnd_closable)			(IsPointInArea(mx, my, width - 21, 5, 16, 14)) && (wnd_closable)
-#define IsPointOverMaximizeButton(mx, my, width, wnd_resizable)		(IsPointInArea(mx, my, width - 39, 5, 16, 14)) && (wnd_resizable)
-#define IsPointOverMinimizeButton(mx, my, width, wnd_minimizable)	(IsPointInArea(mx, my, width - 55, 5, 16, 14)) && (wnd_minimizable)
+#define IsPointOverTitlebar(mx, my, width, wnd_minimizable, wnd_resizable, wnd_closable) \
+		(IsPointInArea(mx, my, 3, 3, width - (((wnd_minimizable ? 16 : 0) + (wnd_resizable ? 16 : 0) + (wnd_closable ? 16 : 0)) + 2), 18))
+
+#define IsPointOverCloseButton(mx, my, width, wnd_closable) \
+		(IsPointInArea(mx, my, width - 21, 5, 16, 14)) && (wnd_closable)
+
+#define IsPointOverMaximizeButton(mx, my, width, wnd_resizable) \
+		(IsPointInArea(mx, my, width - 39, 5, 16, 14)) && (wnd_resizable)
+
+#define IsPointOverMinimizeButton(mx, my, width, wnd_minimizable) \
+		(IsPointInArea(mx, my, width - 55, 5, 16, 14)) && (wnd_minimizable)
 
 static WindowEdge IsPointInWindowEdge(int px, int py, int win_width, int win_height)
 {
@@ -567,11 +576,6 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 	{
 		case WM_CREATE:
 		{
-			// this->font_titlebar = CreateSimpleFont(hWnd, "MS Sans Serif", 8, FW_BOLD);
-			// this->font_element = CreateSimpleFont(hWnd, "MS Sans Serif", 8);
-
-			// TODO(toni): Probably gonna change this in the future...
-
 			this->hWnd_client = CreateWindow(
 				this->wnd_class_client.lpszClassName,
 				NULL, 
@@ -832,7 +836,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			else if (!this->maximized)
 			{
 				// Titlebar
-				if (IsPointOverTitlebar(mx, my, width))
+				if (IsPointOverTitlebar(mx, my, width, this->minimizable, this->resizable, this->closable))
 				{
 					this->drag_window = true;
 
@@ -1161,6 +1165,17 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 				++i)
 			{
 				CClassicComponent *comp = (CClassicComponent *)List_Get(this->__components, i);
+				
+				HFONT font = comp->GetFont();
+
+				if ((font != this->font_titlebar) && 
+					(font != this->font_element))
+				{
+					// If the component has a different allocated font element
+					// delete it as well.
+					DeleteObject(font);
+				}
+
 				comp->OnRemove(hWnd);
 				free(comp);
 			}

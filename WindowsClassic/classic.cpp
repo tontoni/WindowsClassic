@@ -1,17 +1,19 @@
 
+#ifdef _PROG_CLASSICTEST
 /*
 
 		SAMPLE FILE FOR TESTING!
 
 */
 
-#include "resource.h"
-#include "cclassicwnd.h"
+#include "windowsclassic.h"
 
 static void GlobalEventListener(CClassicComponent *source,
 								UINT event, 
 								WPARAM wParam, 
 								LPARAM lParam);
+
+static void PopupProc(HPOPUP popup, UINT message, LPVOID param);
 
 static CClassicButton *my_button, 
 					  *my_colored_button;
@@ -86,7 +88,7 @@ void GlobalEventListener(CClassicComponent *source,
 			hInst,
 			message, 
 			title, 
-			MB_OKCANCEL | MB_ICONINFORMATION
+			MB_ABORTRETRYIGNORE | MB_ICONINFORMATION
 		);
 #else
 		MessageBox(
@@ -102,8 +104,37 @@ void GlobalEventListener(CClassicComponent *source,
 		my_colored_button->SetBackgroundColor(0x000000);
 		my_colored_button->SetText("Whoops! And now \'m black!");
 
-		HPOPUP popup = CreatePopupMenuClassic(hInst);
-		AppendMenuItemClassic(popup, CreateMenuItem(CPM_ITEM_TEXT, "Test item"));
+		HPOPUP popup = CreatePopupMenuClassic(hInst, PopupProc);
+
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT, "Menu Item 1");
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT | CPM_ITEM_DEFAULT, "Menu Item 2 (Default Option)");
+		
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_SEPARATOR, NULL);
+
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT, "Menu Item 3");
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT, "Menu Item 4");
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT | CPM_ITEM_STATE_DISABLED, "Disabled Menu Item");
+		
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_SEPARATOR, NULL);
+
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT, "Some big menu item");
+		CreateAndAppendMenuItemClassic(popup, CPM_ITEM_TEXT, "Some menu item that is even bigger");
+		
 		ShowPopupMenuClassic(popup);
 	}
 }
+
+void PopupProc(HPOPUP popup, UINT message, LPVOID param)
+{
+	if (message == CPM_ITEMSELECTED)
+	{
+		LPCPM_ITEMINFO info = (LPCPM_ITEMINFO)param;
+
+		TCHAR buff[32];
+		sprintf(buff, "Selected Menu Item with index %d", info->menu_index);
+
+		MessageBox(NULL, buff, "Selected item", 0);
+	}
+}
+
+#endif // _PROG_CLASSICTEST

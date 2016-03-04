@@ -1,11 +1,12 @@
 
-#ifndef _CCLASSICWND_H_
-#define _CCLASSICWND_H_
+#ifndef _WINDOWSCLASSIC_H_
+#define _WINDOWSCLASSIC_H_
 
 #pragma once
 
 #include <Windows.h>
 
+#include "resource.h"
 #include "types.h"
 #include "cdrawutils.h"
 #include "basiclist.h"
@@ -89,6 +90,7 @@ typedef class __tagCClassicWnd				CClassicWnd,			*LPCClassicWnd;
 typedef class __tagCClassicComponent		CClassicComponent,		*LPCClassicComponent;
 typedef class __tagCClassicTextComponent	CClassicTextComponent,	*LPCClassicTextComponent;
 typedef class __tagCClassicPanel			CClassicPanel,			*LPCClassicPanel;
+typedef class __tagCClassicBitmap			CClassicBitmap,			*LPCClassicBitmap;
 typedef class __tagCClassicIcon				CClassicIcon,			*LPCClassicIcon;
 typedef class __tagCClassicButton			CClassicButton,			*LPCClassicButton;
 typedef class __tagCClassicLabel			CClassicLabel,			*LPCClassicLabel;
@@ -468,6 +470,37 @@ class __tagCClassicPanel : public CClassicComponent
 };
 
 //////////////////////////////
+//		Classic Bitmap		//
+//////////////////////////////
+class __tagCClassicBitmap : public CClassicComponent
+{
+	public:
+		inline __tagCClassicBitmap(HINSTANCE hInst, TSTRING name, HBITMAP bitmap = NULL)
+								: CClassicComponent(hInst, name)
+		{
+			this->bitmap = bitmap;
+		}
+
+		inline ~__tagCClassicBitmap() {}
+
+		void				SetBitmap(HBITMAP new_bitmap);
+		HBITMAP				GetBitmap() { return this->bitmap; };
+
+		void				SetBitmapPosition(int x, int y);
+
+		void				OnCreate(void);
+		void				PaintComponent(LPDRAWCONTEXT context);
+
+		LRESULT CALLBACK	HandleMessage(HWND hWnd,
+											UINT message,
+											WPARAM wParam,
+											LPARAM lParam);
+	protected:
+		HBITMAP				bitmap;
+		POINT				bitmap_pos;
+};
+
+//////////////////////////////
 //		Classic Icon		//
 //////////////////////////////
 class __tagCClassicIcon : public CClassicComponent
@@ -569,32 +602,58 @@ extern int MessageBoxClassicA(HWND parent,
 // They're very straightforward.								//
 //////////////////////////////////////////////////////////////////
 
-typedef struct CLASSICPOPUP			*HPOPUP;
-typedef struct CLASSICMENUITEM		*HMENUITEM;
+typedef struct CLASSICPOPUP					*HPOPUP;
+typedef struct CLASSICMENUITEM				*HMENUITEM;
+
+typedef struct CPM_ITEM_EXTRADATA_TEXT		*LPCPM_ITEM_EXTRADATA_TEXT;
+
+typedef struct __tagCPM_ITEMINFO
+{
+	HMENUITEM menu_item;
+	int menu_index;
+} CPM_ITEMINFO, *LPCPM_ITEMINFO;
 
 // ClassicPopupMenu
-#define CPM_CREATE					0x00
-#define CPM_SHOW					0x01
-#define CPM_SELECTITEM				0x02
-#define CPM_DESTROY					0x03
+#define CPM_CREATE							0x00
+#define CPM_SHOW							0x01
+#define CPM_ITEMSELECTED					0x02
+#define CPM_DESTROY							0x03
 
-#define CPM_ITEM_TYPEMASK			0x0000000FL
-#define CPM_ITEM_TEXT				0x00000000L
+#define CPM_ITEM_TYPEMASK					0x0000000FL
+#define CPM_ITEM_TEXT						0x00000000L
 // TODO(toni): Not implemented yet
-#define CPM_ITEM_ICONTEXT			0x00000001L
-#define CPM_ITEM_SEPARATOR			0x00000002L
+#define CPM_ITEM_ICONTEXT					0x00000001L
+#define CPM_ITEM_SEPARATOR					0x00000002L
 
-typedef void(*CLASSIC_MENU_PROC)	(HPOPUP, UINT, LPVOID);
+// This flag defines whether a Menu item is the default option or not.
+#define CPM_ITEM_DEFAULT					0x000000F0L
 
-extern HPOPUP		CreatePopupMenuClassic(HINSTANCE hInst);
+#define CPM_ITEM_STATEMASK					0xF0000000L
+#define CPM_ITEM_STATE_SELECTED				0x10000000L
+// Is the menu item disabled or not?
+#define CPM_ITEM_STATE_DISABLED				0x20000000L
+
+typedef void(*CLASSIC_MENU_PROC)			(HPOPUP, UINT, LPVOID);
+
+extern HPOPUP		CreatePopupMenuClassic(HINSTANCE hInst, CLASSIC_MENU_PROC proc);
 extern bool			ShowPopupMenuClassic(HPOPUP popup);
-extern HMENUITEM	CreateMenuItem(UINT style, LPVOID param);
+extern HMENUITEM	CreateMenuItem(HPOPUP parent, UINT style, LPVOID param);
+extern void			AppendMenuItemFlags(HMENUITEM item, UINT flags);
+extern void			RemoveMenuItemFlags(HMENUITEM item, UINT flags);
 extern void			SetMenuItemUserdata(HMENUITEM item, LPVOID data);
 extern LPVOID		GetMenuItemUserdata(HMENUITEM item);
+/*
+	This function returns the first found Menu item that has been flagged as "Default"
+	Returns "NULL" when there is no default item.
+*/
+extern HMENUITEM	GetDefaultMenuItem(HPOPUP popup);
 extern void			AppendMenuItemClassic(HPOPUP popup, HMENUITEM item);
+extern HMENUITEM	CreateAndAppendMenuItemClassic(HPOPUP parent, UINT style, LPVOID param);
 extern void			InsertMenuItemClassic(HPOPUP popup, HMENUITEM item, int index);
+extern HMENUITEM	CreateAndInsertMenuItemClassic(HPOPUP parent, UINT style, LPVOID param, int index);
 extern void			RemoveMenuItemClassic(HPOPUP popup, HMENUITEM item);
 extern void			RemoveMenuitemClassicByIndex(HPOPUP popup, int index);
 extern void			DestroyMenuItem(HMENUITEM item);
+extern void			DestroyPopupMenuClassic(HPOPUP popup);
 
-#endif // _CCLASSICWND_H_
+#endif // _WINDOWSCLASSIC_H_
