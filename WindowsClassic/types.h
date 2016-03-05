@@ -8,10 +8,10 @@
 
 // Only if we compile our Dynamic library together
 // we shall use the "dllexport" declaration.
-#ifdef _COMPILE_THIS
-	#define EXPORT __declspec(dllexport)
+#ifdef _COMPILE_LIB
+	#define EXPORT			__declspec(dllexport)
 #else
-	#define EXPORT __declspec(dllimport)
+	#define EXPORT
 #endif
 
 #define SINLINE				static inline

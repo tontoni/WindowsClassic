@@ -563,9 +563,6 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 										WPARAM wParam, 
 										LPARAM lParam)
 {
-	HDC hdc;
-	PAINTSTRUCT paint_strct;
-
 	RECT wnd_bounds;
 	GetWindowRect(hWnd, &wnd_bounds);
 
@@ -576,12 +573,25 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 	{
 		case WM_CREATE:
 		{
+			// I know, it might not be good to create so many DC's
+			// but it's the only way i know to pre-calculate things!
+			HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
+			SelectObject(temp_dc, this->font_titlebar);
+
+			TCHAR wnd_title[128];
+			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
+
+			SIZE title_size;
+			GetTextExtentPoint32(temp_dc, wnd_title, StrLenA(wnd_title), &title_size);
+
+			DeleteDC(temp_dc);
+
 			this->hWnd_client = CreateWindow(
 				this->wnd_class_client.lpszClassName,
 				NULL, 
 				WS_CHILD | WS_VISIBLE,
 				3, 
-				22, 
+				title_size.cy + 9,
 				0, 
 				0, 
 				this->hWnd, 
@@ -626,6 +636,9 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 		} break;
 		case WM_PAINT:
 		{
+			HDC hdc;
+			PAINTSTRUCT paint_strct;
+
 			hdc = BeginPaint(hWnd, &paint_strct);
 
 			// Selecting our own font
@@ -646,12 +659,18 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			context.fill_color = (this->activated ? 0x800000 : 0x808080);
 			context.draw_color = (this->activated ? 0xCC820C : CLASSIC_DEFAULT_BASECOLOR);
 
+			TCHAR wnd_title[128];
+			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
+
+			SIZE title_size;
+			GetTextExtentPoint32(hdc, wnd_title, StrLenA(wnd_title), &title_size);
+
 			CDrawUtils::FillGradientRectangleLTR(
 				&context,
 				3,
 				3,
 				width - 6,
-				18
+				title_size.cy + 5
 			);
 
 			int title_x = 5;
@@ -675,9 +694,6 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			if (!this->closable)
 				title_w_div -= 18;
-
-			TCHAR wnd_title[128];
-			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
 			
 			context.draw_color = (this->activated ? 0xFFFFFF : CLASSIC_DEFAULT_BASECOLOR);
 

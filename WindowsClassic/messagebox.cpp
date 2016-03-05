@@ -98,202 +98,88 @@ HICON CheckAndLoadIcon(LPMSGBOXINFO info)
 	return (HICON)NULL; // NULL = No icon
 }
 
+void AddButtons(LPMSGBOXINFO info, 
+				LPCClassicWnd window, 
+				const TSTRING *button_texts, 
+				int button_cnt, 
+				int button_w, 
+				int button_h, 
+				int button_offset)
+{
+	RECT client_bounds = window->GetClientBounds();
+	int buttons_width = ((button_w + button_offset) * button_cnt);
+
+	for (int i = 0; i < button_cnt; ++i)
+	{
+		CClassicButton *button = new CClassicButton(
+			info->hInstance,
+			GenerateNewClassName(),
+			button_texts[i]
+		);
+
+		button->SetSize(button_w, button_h);
+
+		button->SetPosition(
+			((client_bounds.right / 2) - (buttons_width / 2)) + ((button_w + button_offset) * i),
+			client_bounds.bottom - 34
+		);
+
+		button->event_listener = MessageBoxEventListener;
+
+		window->AddComponent(button);
+	}
+}
+
 bool HandleMsgBoxTypes(LPMSGBOXINFO info, 
 						LPCClassicWnd window)
 {
-	RECT client_bounds = window->GetClientBounds();
+	// We currently only have message boxes that have 
+	// 3 buttons at max
+	// +1 entry to tell the "StrPtrArrLen" function when to break
+	TSTRING button_texts[4];
+	
+	for (int i = 0; i < ARRAYSIZE(button_texts); ++i)
+		button_texts[i] = NULL;
 
 	switch (info->creation_flags & MB_TYPEMASK)
 	{
 		// Adding the different message box buttons
 		case MB_OK:
 		{
-			CClassicButton *button_ok = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"OK"
-			);
-
-			button_ok->SetSize(75, 23);
-
-			button_ok->SetXPositionRelativeTo(client_bounds);
-			button_ok->SetYPosition(client_bounds.bottom - 34);
-
-			button_ok->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_ok);
-
-			return true;
-		}
+			button_texts[0] = "OK";
+		} break;
 		case MB_OKCANCEL:
 		{
-			int center_x = (client_bounds.right / 2);
-
-			CClassicButton *button_cancel = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Cancel"
-			);
-
-			button_cancel->SetSize(75, 23);
-
-			button_cancel->SetXPosition(center_x + 3);
-			button_cancel->SetYPosition(client_bounds.bottom - 34);
-
-			button_cancel->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_cancel);
-
-			CClassicButton *button_ok = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"OK"
-			);
-
-			button_ok->SetSize(75, 23);
-
-			button_ok->SetXPosition(center_x - 78);
-			button_ok->SetYPosition(client_bounds.bottom - 34);
-
-			button_ok->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_ok);
-			
-			return true;
-		}
+			button_texts[0] = "OK";
+			button_texts[1] = "Cancel";
+		} break;
 		case MB_ABORTRETRYIGNORE:
 		{
-			int center_x = (client_bounds.right / 2);
-			int btn_wh = (75 / 2);
-
-			CClassicButton *button_ignore = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Ignore"
-			);
-
-			button_ignore->SetSize(75, 23);
-
-			button_ignore->SetXPosition(center_x + (btn_wh + 3));
-			button_ignore->SetYPosition(client_bounds.bottom - 34);
-
-			button_ignore->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_ignore);
-
-			CClassicButton *button_retry = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Retry"
-			);
-
-			button_retry->SetSize(75, 23);
-
-			button_retry->SetXPosition(center_x - btn_wh);
-			button_retry->SetYPosition(client_bounds.bottom - 34);
-
-			button_retry->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_retry);
-			
-			CClassicButton *button_abort = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Abort"
-			);
-
-			button_abort->SetSize(75, 23);
-
-			button_abort->SetXPosition(center_x - (78 + btn_wh));
-			button_abort->SetYPosition(client_bounds.bottom - 34);
-
-			button_abort->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_abort);
-
-			return true;
-		}
+			button_texts[0] = "Abort";
+			button_texts[1] = "Retry";
+			button_texts[2] = "Ignore";
+		} break;
 		case MB_YESNOCANCEL:
 		{
-			// TODO(toni): Handle this type!
-			return true;
-		}
+			button_texts[0] = "Yes";
+			button_texts[1] = "No";
+			button_texts[2] = "Cancel";
+		} break;
 		case MB_YESNO:
 		{
-			int center_x = (client_bounds.right / 2);
-
-			CClassicButton *button_no = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"No"
-			);
-
-			button_no->SetSize(75, 23);
-
-			button_no->SetXPosition(center_x + 3);
-			button_no->SetYPosition(client_bounds.bottom - 34);
-
-			button_no->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_no);
-
-			CClassicButton *button_yes = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Yes"
-			);
-
-			button_yes->SetSize(75, 23);
-
-			button_yes->SetXPosition(center_x - 78);
-			button_yes->SetYPosition(client_bounds.bottom - 34);
-
-			button_yes->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_yes);
-
-			return true;
-		}
+			button_texts[0] = "Yes";
+			button_texts[1] = "No";
+		} break;
 		case MB_RETRYCANCEL:
 		{
-			int center_x = (client_bounds.right / 2);
-
-			CClassicButton *button_cancel = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Cancel"
-			);
-
-			button_cancel->SetSize(75, 23);
-
-			button_cancel->SetXPosition(center_x + 3);
-			button_cancel->SetYPosition(client_bounds.bottom - 34);
-
-			button_cancel->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_cancel);
-
-			CClassicButton *button_retry = new CClassicButton(
-				info->hInstance,
-				GenerateNewClassName(),
-				"Retry"
-			);
-
-			button_retry->SetSize(75, 23);
-
-			button_retry->SetXPosition(center_x - 78);
-			button_retry->SetYPosition(client_bounds.bottom - 34);
-
-			button_retry->event_listener = MessageBoxEventListener;
-
-			window->AddComponent(button_retry);
-
-			return true;
-		}
+			button_texts[0] = "Retry";
+			button_texts[1] = "Cancel";
+		} break;
 		case MB_CANCELTRYCONTINUE:
 		{
-			// TODO(toni): Handle this type!
-			return true;
+			button_texts[0] = "Cancel";
+			button_texts[1] = "Try Again";
+			button_texts[2] = "Continue";
 		}
 		default:
 		{
@@ -301,7 +187,24 @@ bool HandleMsgBoxTypes(LPMSGBOXINFO info,
 		}
 	}
 
-	return false;
+	T_UINT32 button_cnt = StrPtrArrLenA(button_texts);
+
+	if (!button_cnt)
+		// If the function wasn't able to add any buttons then
+		// just fail the call
+		return false;
+
+	AddButtons(
+		info,
+		window,
+		button_texts,
+		button_cnt,
+		75,
+		23,
+		3
+	);
+	
+	return true;
 }
 
 DWORD WINAPI MessageBoxWorker(LPVOID param)
@@ -393,7 +296,7 @@ DWORD WINAPI MessageBoxWorker(LPVOID param)
 
 		window->AddComponent(icon_message);
 	}
-
+	
 	// If this operation fails, the user passed in an invalid or unknown flag!
 	if (!HandleMsgBoxTypes(info, window))
 	{
