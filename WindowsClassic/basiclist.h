@@ -2,21 +2,20 @@
 #ifndef _BASICLIST_H_
 #define _BASICLIST_H_
 
+// NOTE(toni): Modified this file for DLL exports
+#include "types.h"
+
 #ifdef __cplusplus // Not actually necessary but it's just a nice security measure.
-#define C_EXTERN extern "C"
+	#define C_EXTERN extern "C" EXPORT
 #else
-#define C_EXTERN extern
+	#define C_EXTERN extern EXPORT
 #endif
 
 #ifdef _MSC_VER
-#define C_INLINE static __inline
+	#define C_INLINE static __inline
 #else
-#define C_INLINE static inline
+	#define C_INLINE static inline
 #endif
-
-#pragma once
-
-#include "types.h"
 
 #define LIST_DEFAULT_SIZE 0x00
 

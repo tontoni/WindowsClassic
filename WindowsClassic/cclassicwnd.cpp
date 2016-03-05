@@ -643,14 +643,14 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			// Window titlebar drawcode
 
-			DWORD col_active = (activated ? 0x800000 : 0x808080);
-			context.fill_color = col_active;
+			context.fill_color = (this->activated ? 0x800000 : 0x808080);
+			context.draw_color = (this->activated ? 0xCC820C : CLASSIC_DEFAULT_BASECOLOR);
 
-			CDrawUtils::FillSolidRectangle(
-				&context, 
-				3, 
-				3, 
-				width - 6, 
+			CDrawUtils::FillGradientRectangleLTR(
+				&context,
+				3,
+				3,
+				width - 6,
 				18
 			);
 
@@ -678,9 +678,10 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			TCHAR wnd_title[128];
 			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
+			
+			context.draw_color = (this->activated ? 0xFFFFFF : CLASSIC_DEFAULT_BASECOLOR);
 
-			context.fill_color = col_active;
-			context.draw_color = 0xFFFFFF;
+			SetBkMode(hdc, TRANSPARENT);
 
 			CDrawUtils::DrawString(
 				&context, 
@@ -688,6 +689,8 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				title_x, 5, 
 				width - (title_w_div + title_x), 18
 			);
+
+			SetBkMode(hdc, OPAQUE);
 
 			// X button
 			// Hardcoded colors - Not great i know!

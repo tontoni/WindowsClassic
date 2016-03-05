@@ -6,6 +6,14 @@
 
 #include <tchar.h>
 
+// Only if we compile our Dynamic library together
+// we shall use the "dllexport" declaration.
+#ifdef _COMPILE_THIS
+	#define EXPORT __declspec(dllexport)
+#else
+	#define EXPORT __declspec(dllimport)
+#endif
+
 #define SINLINE				static inline
 
 typedef char				T_INT8;

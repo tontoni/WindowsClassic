@@ -86,19 +86,19 @@
 	}
 #endif
 
-typedef class __tagCClassicWnd				CClassicWnd,			*LPCClassicWnd;
-typedef class __tagCClassicComponent		CClassicComponent,		*LPCClassicComponent;
-typedef class __tagCClassicTextComponent	CClassicTextComponent,	*LPCClassicTextComponent;
-typedef class __tagCClassicPanel			CClassicPanel,			*LPCClassicPanel;
-typedef class __tagCClassicBitmap			CClassicBitmap,			*LPCClassicBitmap;
-typedef class __tagCClassicIcon				CClassicIcon,			*LPCClassicIcon;
-typedef class __tagCClassicButton			CClassicButton,			*LPCClassicButton;
-typedef class __tagCClassicLabel			CClassicLabel,			*LPCClassicLabel;
+typedef class EXPORT __tagCClassicWnd				CClassicWnd,			*LPCClassicWnd;
+typedef class EXPORT __tagCClassicComponent			CClassicComponent,		*LPCClassicComponent;
+typedef class EXPORT __tagCClassicTextComponent		CClassicTextComponent,	*LPCClassicTextComponent;
+typedef class EXPORT __tagCClassicPanel				CClassicPanel,			*LPCClassicPanel;
+typedef class EXPORT __tagCClassicBitmap			CClassicBitmap,			*LPCClassicBitmap;
+typedef class EXPORT __tagCClassicIcon				CClassicIcon,			*LPCClassicIcon;
+typedef class EXPORT __tagCClassicButton			CClassicButton,			*LPCClassicButton;
+typedef class EXPORT __tagCClassicLabel				CClassicLabel,			*LPCClassicLabel;
 
 typedef void(*WINDOWLISTENER)(LPCClassicWnd, UINT, WPARAM, LPARAM);
 typedef void(*EVENTLISTENER)(LPCClassicComponent, UINT, WPARAM, LPARAM);
 
-enum WindowEdge
+enum EXPORT WindowEdge
 {
 	WE_NOTHING = -1,
 	WE_TOPBORDER,
@@ -150,7 +150,7 @@ SINLINE HFONT CreateSimpleFont(HWND hWnd,
 	return font;
 }
 
-extern TSTRING GenerateNewClassName(TSTRING prefix = "Classic");
+extern EXPORT TSTRING GenerateNewClassName(TSTRING prefix = "Classic");
 
 class __tagCClassicWnd
 {
@@ -579,11 +579,11 @@ class __tagCClassicLabel : public CClassicTextComponent
 		UINT				format_flags = 0;
 };
 
-extern int MessageBoxClassicA(HWND parent,
-								HINSTANCE hInst,
-								TSTRING message,
-								TSTRING title,
-								UINT flags);
+extern EXPORT int MessageBoxClassicA(HWND parent,
+									HINSTANCE hInst,
+									TSTRING message,
+									TSTRING title,
+									UINT flags);
 
 #if (defined(UNICODE)) || (defined(_UNICODE))
 	// TODO(toni): Implement Unicode support...?
@@ -635,25 +635,25 @@ typedef struct __tagCPM_ITEMINFO
 
 typedef void(*CLASSIC_MENU_PROC)			(HPOPUP, UINT, LPVOID);
 
-extern HPOPUP		CreatePopupMenuClassic(HINSTANCE hInst, CLASSIC_MENU_PROC proc);
-extern bool			ShowPopupMenuClassic(HPOPUP popup);
-extern HMENUITEM	CreateMenuItem(HPOPUP parent, UINT style, LPVOID param);
-extern void			AppendMenuItemFlags(HMENUITEM item, UINT flags);
-extern void			RemoveMenuItemFlags(HMENUITEM item, UINT flags);
-extern void			SetMenuItemUserdata(HMENUITEM item, LPVOID data);
-extern LPVOID		GetMenuItemUserdata(HMENUITEM item);
+extern EXPORT HPOPUP		CreatePopupMenuClassic(HINSTANCE hInst, CLASSIC_MENU_PROC proc);
+extern EXPORT bool			ShowPopupMenuClassic(HPOPUP popup);
+extern EXPORT HMENUITEM		CreateMenuItem(HPOPUP parent, UINT style, LPVOID param);
+extern EXPORT void			AppendMenuItemFlags(HMENUITEM item, UINT flags);
+extern EXPORT void			RemoveMenuItemFlags(HMENUITEM item, UINT flags);
+extern EXPORT void			SetMenuItemUserdata(HMENUITEM item, LPVOID data);
+extern EXPORT LPVOID		GetMenuItemUserdata(HMENUITEM item);
 /*
 	This function returns the first found Menu item that has been flagged as "Default"
 	Returns "NULL" when there is no default item.
 */
-extern HMENUITEM	GetDefaultMenuItem(HPOPUP popup);
-extern void			AppendMenuItemClassic(HPOPUP popup, HMENUITEM item);
-extern HMENUITEM	CreateAndAppendMenuItemClassic(HPOPUP parent, UINT style, LPVOID param);
-extern void			InsertMenuItemClassic(HPOPUP popup, HMENUITEM item, int index);
-extern HMENUITEM	CreateAndInsertMenuItemClassic(HPOPUP parent, UINT style, LPVOID param, int index);
-extern void			RemoveMenuItemClassic(HPOPUP popup, HMENUITEM item);
-extern void			RemoveMenuitemClassicByIndex(HPOPUP popup, int index);
-extern void			DestroyMenuItem(HMENUITEM item);
-extern void			DestroyPopupMenuClassic(HPOPUP popup);
+extern EXPORT HMENUITEM		GetDefaultMenuItem(HPOPUP popup);
+extern EXPORT void			AppendMenuItemClassic(HPOPUP popup, HMENUITEM item);
+extern EXPORT HMENUITEM		CreateAndAppendMenuItemClassic(HPOPUP parent, UINT style, LPVOID param);
+extern EXPORT void			InsertMenuItemClassic(HPOPUP popup, HMENUITEM item, int index);
+extern EXPORT HMENUITEM		CreateAndInsertMenuItemClassic(HPOPUP parent, UINT style, LPVOID param, int index);
+extern EXPORT void			RemoveMenuItemClassic(HPOPUP popup, HMENUITEM item);
+extern EXPORT void			RemoveMenuitemClassicByIndex(HPOPUP popup, int index);
+extern EXPORT void			DestroyMenuItem(HMENUITEM item);
+extern EXPORT void			DestroyPopupMenuClassic(HPOPUP popup);
 
 #endif // _WINDOWSCLASSIC_H_

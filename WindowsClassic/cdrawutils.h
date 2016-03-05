@@ -12,13 +12,21 @@
 
 typedef struct __tagDRAWCONTEXT
 {
-	PAINTSTRUCT paintstruct;
+	PAINTSTRUCT			paintstruct;
 
-	DWORD fill_color,
-		  draw_color;
+	DWORD				fill_color,
+						draw_color;
 } DRAWCONTEXT, *LPDRAWCONTEXT;
 
-class CDrawUtils
+typedef struct __tagCOLORRGB
+{
+	BYTE				Red, 
+						Green, 
+						Blue, 
+						Alpha;
+} COLORRGBINFO, *LPCOLORRGBINFO;
+
+class EXPORT CDrawUtils
 {
 	public:
 		static DWORD			MakeColorDarker(DWORD color, 
@@ -26,6 +34,21 @@ class CDrawUtils
 
 		static DWORD			MakeColorBrighter(DWORD color, 
 													BYTE by_how_much);
+
+		static void				GetColorInfo(DWORD color_mask, 
+											const LPCOLORRGBINFO lpcolor);
+
+		static void				FillGradientRectangleLTR(LPDRAWCONTEXT context, 
+														int x, 
+														int y, 
+														int w, 
+														int h);
+
+		static void				FillGradientRectangleTTB(LPDRAWCONTEXT context,
+														int x,
+														int y,
+														int w,
+														int h);
 
 		static void				FillSolidRectangle(LPDRAWCONTEXT context,
 													int x,

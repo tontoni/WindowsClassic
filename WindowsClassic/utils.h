@@ -13,11 +13,11 @@ case message:														\
 	function(hWnd, wParam, lParam);									\
 } break;
 
-extern T_UINT32 StrLenA(TSTRING string);
+EXPORT extern T_UINT32 StrLenA(TSTRING string);
 
 // Unicode support (currently not really used though)
 #if (defined(UNICODE)) || (defined(_UNICODE))
-	extern T_UINT32 StrLenW(WSTRING string);
+	EXPORT extern T_UINT32 StrLenW(WSTRING string);
 #endif // UNICODE || _UNICODE
 
 #endif // _UTILS_H_

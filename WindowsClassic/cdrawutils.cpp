@@ -31,6 +31,60 @@ DWORD CDrawUtils::MakeColorBrighter(DWORD color,
 	return (DWORD)(b << 16 | g << 8 | r << 0);
 }
 
+void CDrawUtils::GetColorInfo(DWORD color_mask,
+								const LPCOLORRGBINFO lpcolor)
+{
+	lpcolor->Alpha	= (color_mask >> 24) & 0xFF;
+	lpcolor->Blue	= (color_mask >> 16) & 0xFF;
+	lpcolor->Green	= (color_mask >>  8) & 0xFF;
+	lpcolor->Red	= (color_mask >>  0) & 0xFF;
+}
+
+// "fill_color" acts here as the first color
+// (in this case the left side)
+// and "draw_color" is the opposite color 
+// (in this case, right)
+void CDrawUtils::FillGradientRectangleLTR(LPDRAWCONTEXT context,
+											int x,
+											int y,
+											int w,
+											int h)
+{
+	COLORRGBINFO col1, 
+				 col2;
+
+	GetColorInfo(context->fill_color, &col1);
+	GetColorInfo(context->draw_color, &col2);
+
+	TRIVERTEX vertices[] = 
+	{
+		{ x    , y    , col1.Red << 8, col1.Green << 8, col1.Blue << 8, col1.Alpha << 8 },
+		{ x + w, y + h, col2.Red << 8, col2.Green << 8, col2.Blue << 8, col2.Alpha << 8 }
+	};
+
+	GRADIENT_RECT matrix_mesh[] = {
+		{ 0, 1 }
+	};
+
+	GradientFill(
+		context->paintstruct.hdc, 
+		vertices, 
+		ARRAYSIZE(vertices), 
+		matrix_mesh,
+		ARRAYSIZE(matrix_mesh),
+		GRADIENT_FILL_RECT_H
+	);
+}
+
+void CDrawUtils::FillGradientRectangleTTB(LPDRAWCONTEXT context,
+											int x,
+											int y,
+											int w,
+											int h)
+{
+
+}
+
 // This might not be the best function to draw a simple rectangle
 // but it should do for now.
 void CDrawUtils::FillSolidRectangle(LPDRAWCONTEXT context,
