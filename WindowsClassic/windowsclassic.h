@@ -77,7 +77,7 @@
 	{								\
 		MessageBox(					\
 			NULL,					\
-			where,					\
+			(LPCTSTR)where,			\
 			TEXT("Error"),			\
 			MB_OK | MB_ICONERROR	\
 		);							\
@@ -94,6 +94,7 @@ typedef class EXPORT __tagCClassicBitmap			CClassicBitmap,			*LPCClassicBitmap;
 typedef class EXPORT __tagCClassicIcon				CClassicIcon,			*LPCClassicIcon;
 typedef class EXPORT __tagCClassicButton			CClassicButton,			*LPCClassicButton;
 typedef class EXPORT __tagCClassicLabel				CClassicLabel,			*LPCClassicLabel;
+typedef class EXPORT __tagCClassicTextbox			CClassicTextbox,		*LPCClassicTextbox;
 
 typedef void(*WINDOWLISTENER)(LPCClassicWnd, UINT, WPARAM, LPARAM);
 typedef void(*EVENTLISTENER)(LPCClassicComponent, UINT, WPARAM, LPARAM);
@@ -112,7 +113,7 @@ enum EXPORT WindowEdge
 };
 
 SINLINE HFONT CreateSimpleFontFromDC(HDC hdc, 
-									const TSTRING font_name, 
+									const STRING font_name, 
 									const long font_size, 
 									LONG font_weight = FW_NORMAL)
 {
@@ -120,18 +121,18 @@ SINLINE HFONT CreateSimpleFontFromDC(HDC hdc,
 	logfont.lfHeight = -MulDiv(font_size, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 	logfont.lfWeight = font_weight;
 
-	strcpy(logfont.lfFaceName, font_name);
+	lstrcpy(logfont.lfFaceName, font_name);
 
 	HFONT font = CreateFontIndirect(&logfont);
 
 	return font;
 }
 
-SINLINE HFONT CreateSimpleFontIndependent(const TSTRING font_name,
+SINLINE HFONT CreateSimpleFontIndependent(const STRING font_name,
 											const long font_size, 
 											LONG font_weight = FW_NORMAL)
 {
-	HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
+	HDC temp_dc = CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
 	HFONT font = CreateSimpleFontFromDC(temp_dc, font_name, font_size, font_weight);
 	DeleteDC(temp_dc);
 
@@ -139,7 +140,7 @@ SINLINE HFONT CreateSimpleFontIndependent(const TSTRING font_name,
 }
 
 SINLINE HFONT CreateSimpleFont(HWND hWnd,
-								const TSTRING font_name, 
+								const STRING font_name, 
 								const long font_size, 
 								LONG font_weight = FW_NORMAL)
 {
@@ -150,7 +151,8 @@ SINLINE HFONT CreateSimpleFont(HWND hWnd,
 	return font;
 }
 
-extern EXPORT TSTRING GenerateNewClassName(TSTRING prefix = "Classic");
+extern EXPORT SIZE GetFontMetrics(HFONT font, STRING text);
+extern EXPORT STRING GenerateNewClassName(STRING prefix = TEXT("Classic"));
 
 class __tagCClassicWnd
 {
@@ -186,15 +188,10 @@ class __tagCClassicWnd
 	/////// ! BELOW. BUT DON'T BELIEVE IT, BECAUSE IT'S LYING      ! ///////
 	////////////////////////////////////////////////////////////////////////
 
-	RECT						AREA_GetTitlebarBounds();
-	RECT						AREA_GetCloseButtonBounds();
-	RECT						AREA_GetMaximizeButtonBounds();
-	RECT						AREA_GetMinimizeButtonBounds();
-
 	public:
 		__tagCClassicWnd(HINSTANCE hInst, 
-						TSTRING wndclass_name, 
-						TSTRING wndclass_cl_name, 
+						STRING wndclass_name, 
+						STRING wndclass_cl_name, 
 						HICON icon = NULL, 
 						HICON icon_small = NULL);
 
@@ -204,7 +201,7 @@ class __tagCClassicWnd
 												int yPos      = -1, 
 												int width     = -1, 
 												int height    = -1, 
-												TSTRING title = NULL);
+												STRING title  = NULL);
 
 		void					Destroy();
 		
@@ -217,13 +214,18 @@ class __tagCClassicWnd
 		void					SetPositionRelativeTo(RECT bounds);
 		void					SetSize(int width, int height);
 
-		void					SetTitle(TSTRING new_title);
+		void					SetTitle(STRING new_title);
 		void					SetEnabled(bool enabled);
 		void					SetClosable(bool closable);
 		void					SetCloseButtonEnabled(bool enabled);
 		void					SetResizable(bool resizable);
 		void					SetMinimizable(bool minimizable);
 		void					SetVisible(bool visible);
+
+		void					SetTitlebarColorActiveLeft(DWORD color);
+		void					SetTitlebarColorActiveRight(DWORD color);
+		void					SetTitlebarColorInactiveLeft(DWORD color);
+		void					SetTitlebarColorInactiveRight(DWORD color);
 
 		void					SetBackgroundColor(DWORD color);
 		void					SetForegroundColor(DWORD color);
@@ -234,16 +236,16 @@ class __tagCClassicWnd
 		void					RepaintWindow();
 		void					RepaintClientArea();
 
-		inline bool				IsEnabled()						{ return this->enabled; }
-		inline bool				IsReady()						{ return ((this->hWnd) && (this->hWnd_client) /*&& (this->enabled)*/ && (this->visible)); }
-		inline bool				IsClosable()					{ return this->closable; }
-		inline bool				IsCloseButtonEnabled()			{ return this->close_button_enabled; }
-		inline bool				IsResizable()					{ return this->resizable; }
-		inline bool				IsMinimizable()					{ return this->minimizable; }
-		inline bool				IsVisible()						{ return this->visible; }
-		inline bool				IsActivated()					{ return this->activated; }
-		inline bool				IsMaximized()					{ return this->maximized; }
-		inline bool				IsMinimized()					{ return this->minimized; }
+		inline bool				IsEnabled()								{ return this->enabled; }
+		inline bool				IsReady()								{ return ((this->hWnd) && (this->hWnd_client) /*&& (this->enabled)*/ && (this->visible)); }
+		inline bool				IsClosable()							{ return this->closable; }
+		inline bool				IsCloseButtonEnabled()					{ return this->close_button_enabled; }
+		inline bool				IsResizable()							{ return this->resizable; }
+		inline bool				IsMinimizable()							{ return this->minimizable; }
+		inline bool				IsVisible()								{ return this->visible; }
+		inline bool				IsActivated()							{ return this->activated; }
+		inline bool				IsMaximized()							{ return this->maximized; }
+		inline bool				IsMinimized()							{ return this->minimized; }
 
 		RECT					GetWindowBounds();
 		RECT					GetClientBounds();
@@ -251,13 +253,18 @@ class __tagCClassicWnd
 		SIZE					GetWindowSize();
 		SIZE					GetClientSize();
 
-		TSTRING					GetTitle()						{ return this->__title; }
+		STRING					GetTitle()								{ return this->__title; }
 
-		DWORD					GetBackgroundColor()			{ return this->__background_color; }
-		DWORD					GetForegroundColor()			{ return this->__foreground_color; }
+		DWORD					GetTitlebarColorActiveLeft()			{ return this->color_titlebar_active_l; }
+		DWORD					GetTitlebarColorActiveRight()			{ return this->color_titlebar_active_r; }
+		DWORD					GetTitlebarColorInactiveLeft()			{ return this->color_titlebar_inactive_l; }
+		DWORD					GetTitlebarColorInactiveRight()			{ return this->color_titlebar_inactive_r; }
 
-		HFONT					GetTitlebarFont()				{ return this->font_titlebar; }
-		HFONT					GetFont()						{ return this->font_element; }
+		DWORD					GetBackgroundColor()					{ return this->__background_color; }
+		DWORD					GetForegroundColor()					{ return this->__foreground_color; }
+
+		HFONT					GetTitlebarFont()						{ return this->font_titlebar; }
+		HFONT					GetFont()								{ return this->font_element; }
 
 		HDC						GetWindowDrawContext();
 		HDC						GetDrawContext();
@@ -283,6 +290,11 @@ class __tagCClassicWnd
 		HFONT					font_titlebar,
 								font_element;
 
+		DWORD					color_titlebar_active_l			= 0x800000, 
+								color_titlebar_active_r			= 0xCC820C,
+								color_titlebar_inactive_l		= 0x808080,
+								color_titlebar_inactive_r		= CLASSIC_DEFAULT_BASECOLOR;
+
 		const HBRUSH			classic_default_brush			= CreateSolidBrush(CLASSIC_DEFAULT_BASECOLOR);
 
 		//////////////////////////////
@@ -291,7 +303,7 @@ class __tagCClassicWnd
 		DWORD					__background_color				= CLASSIC_DEFAULT_BASECOLOR, 
 								__foreground_color				= 0x000000;
 
-		TSTRING					__title							= NULL;
+		STRING					__title							= NULL;
 		RECT					__bounds;
 
 		int						prev_mx							= 0, 
@@ -331,7 +343,6 @@ class __tagCClassicWnd
 //////////////////////////////////////
 //		Component Main Class		//
 //////////////////////////////////////
-
 class __tagCClassicComponent
 {
 	SINLINE LRESULT CALLBACK Internal_WndProc(HWND hWnd,
@@ -350,7 +361,7 @@ class __tagCClassicComponent
 	public:
 		EVENTLISTENER				event_listener = NULL;
 
-		__tagCClassicComponent(HINSTANCE hInst, TSTRING name);
+		__tagCClassicComponent(HINSTANCE hInst, STRING name);
 		~__tagCClassicComponent();
 
 		void						PostComponentMessage(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -426,7 +437,7 @@ class __tagCClassicComponent
 class __tagCClassicTextComponent : public CClassicComponent
 {
 	public:
-		inline __tagCClassicTextComponent(HINSTANCE hInst, TSTRING name, TSTRING text = NULL)
+		inline __tagCClassicTextComponent(HINSTANCE hInst, STRING name, STRING text = NULL)
 						: CClassicComponent(hInst, name)
 		{
 			this->text = text;
@@ -434,10 +445,10 @@ class __tagCClassicTextComponent : public CClassicComponent
 
 		inline ~__tagCClassicTextComponent() {}
 
-		void				SetText(TSTRING string);
-		inline TSTRING		GetText() { return this->text; }
+		void				SetText(STRING string);
+		inline STRING		GetText() { return this->text; }
 	protected:
-		TSTRING				text;
+		STRING				text;
 };
 
 //////////////////////////////
@@ -446,7 +457,7 @@ class __tagCClassicTextComponent : public CClassicComponent
 class __tagCClassicPanel : public CClassicComponent
 {
 	public:
-		inline __tagCClassicPanel(HINSTANCE hInst, TSTRING name)
+		inline __tagCClassicPanel(HINSTANCE hInst, STRING name)
 								: CClassicComponent(hInst, name)
 		{
 		}
@@ -475,7 +486,7 @@ class __tagCClassicPanel : public CClassicComponent
 class __tagCClassicBitmap : public CClassicComponent
 {
 	public:
-		inline __tagCClassicBitmap(HINSTANCE hInst, TSTRING name, HBITMAP bitmap = NULL)
+		inline __tagCClassicBitmap(HINSTANCE hInst, STRING name, HBITMAP bitmap = NULL)
 								: CClassicComponent(hInst, name)
 		{
 			this->bitmap = bitmap;
@@ -506,7 +517,7 @@ class __tagCClassicBitmap : public CClassicComponent
 class __tagCClassicIcon : public CClassicComponent
 {
 	public:
-		inline __tagCClassicIcon(HINSTANCE hInst, TSTRING name, HICON icon = NULL)
+		inline __tagCClassicIcon(HINSTANCE hInst, STRING name, HICON icon = NULL)
 								: CClassicComponent(hInst, name)
 		{
 			this->icon = icon;
@@ -534,7 +545,7 @@ class __tagCClassicIcon : public CClassicComponent
 class __tagCClassicButton : public CClassicTextComponent
 {
 	public:
-		inline __tagCClassicButton(HINSTANCE hInst, TSTRING name, TSTRING text = NULL)
+		inline __tagCClassicButton(HINSTANCE hInst, STRING name, STRING text = NULL)
 								: CClassicTextComponent(hInst, name, text)
 		{
 		}
@@ -559,7 +570,7 @@ class __tagCClassicButton : public CClassicTextComponent
 class __tagCClassicLabel : public CClassicTextComponent
 {
 	public:
-		inline __tagCClassicLabel(HINSTANCE hInst, TSTRING name, TSTRING text = NULL)
+		inline __tagCClassicLabel(HINSTANCE hInst, STRING name, STRING text = NULL)
 								: CClassicTextComponent(hInst, name, text)
 		{
 		}
@@ -579,17 +590,45 @@ class __tagCClassicLabel : public CClassicTextComponent
 		UINT				format_flags = 0;
 };
 
+//////////////////////////////
+//		Classic Textbox		//
+//////////////////////////////
+class __tagCClassicTextbox : public CClassicTextComponent
+{
+	public:
+		inline __tagCClassicTextbox(HINSTANCE hInst, STRING name, STRING text = NULL)
+								: CClassicTextComponent(hInst, name, text)
+		{
+		}
+
+		inline ~__tagCClassicTextbox() {}
+		
+		void				OnCreate(void);
+		void				PaintComponent(LPDRAWCONTEXT context);
+
+		LRESULT CALLBACK	HandleMessage(HWND hWnd,
+											UINT message,
+											WPARAM wParam,
+											LPARAM lParam);
+};
+
 extern EXPORT int MessageBoxClassicA(HWND parent,
-									HINSTANCE hInst,
 									TSTRING message,
 									TSTRING title,
 									UINT flags);
 
+extern EXPORT int MessageBoxClassicW(HWND parent, 
+									WSTRING message, 
+									WSTRING title, 
+									UINT flags);
+
+// Checking for Unicode Support
 #if (defined(UNICODE)) || (defined(_UNICODE))
-	// TODO(toni): Implement Unicode support...?
+	#define MessageBoxClassic(parent, message, title, flags) \
+			MessageBoxClassicW(parent, message, title, flags)
 #else
-	#define MessageBoxClassic(parent, hInst, message, title, flags) \
-			MessageBoxClassicA(parent, hInst, message, title, flags)
+	#define MessageBoxClassic(parent, message, title, flags) \
+			MessageBoxClassicA(parent, message, title, flags)
 #endif
 
 //////////////////////////////////////////////////////////////////

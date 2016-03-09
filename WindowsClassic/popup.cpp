@@ -32,7 +32,7 @@ struct CLASSICMENUITEM
 
 struct CPM_ITEM_EXTRADATA_TEXT
 {
-	TSTRING					item_text;
+	STRING					item_text;
 };
 
 static DWORD WINAPI PopupWorker(LPVOID param);
@@ -56,10 +56,10 @@ HPOPUP CreatePopupMenuClassic(HINSTANCE hInst, CLASSIC_MENU_PROC proc)
 	// We have to create these two little font handles
 	// here, or otherwise some font metrics will be screwed up!
 	popup->menu_item_font =
-		CreateSimpleFontIndependent("MS Sans Serif", 8);
+		CreateSimpleFontIndependent(TEXT("MS Sans Serif"), 8);
 
 	popup->menu_item_font_default =
-		CreateSimpleFontIndependent("MS Sans Serif", 8, FW_BOLD);
+		CreateSimpleFontIndependent(TEXT("MS Sans Serif"), 8, FW_BOLD);
 
 	return popup;
 }
@@ -96,11 +96,11 @@ HMENUITEM CreateMenuItem(HPOPUP parent, UINT style, LPVOID param)
 			LPCPM_ITEM_EXTRADATA_TEXT text_data = (LPCPM_ITEM_EXTRADATA_TEXT)malloc(sizeof(CPM_ITEM_EXTRADATA_TEXT));
 			
 			// Yes param is expected to be a string here
-			text_data->item_text = (TSTRING)param;
+			text_data->item_text = (STRING)param;
 			item->item_extradata = text_data;
 
 			// Temporary DC - for computing the text size...
-			HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
+			HDC temp_dc = CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
 
 			if (parent)
 			{
@@ -117,7 +117,7 @@ HMENUITEM CreateMenuItem(HPOPUP parent, UINT style, LPVOID param)
 			GetTextExtentPoint32(
 				temp_dc, 
 				text_data->item_text, 
-				StrLenA(text_data->item_text), 
+				StrLen(text_data->item_text), 
 				&text_size
 			);
 
@@ -212,11 +212,18 @@ void RemoveMenuitemClassicByIndex(HPOPUP popup, int index)
 void DestroyMenuItem(HMENUITEM item)
 {
 	if (item->item_extradata)
+	{
 		free(item->item_extradata);
+		// Make sure that nobody re-uses the same addresses...
+		item->item_extradata = NULL;
+	}
 
 	if (item->userdata)
+	{
 		free(item->userdata);
-	
+		item->userdata = NULL;
+	}
+
 	free(item);
 }
 
@@ -240,7 +247,7 @@ DWORD WINAPI PopupWorker(LPVOID param)
 	popup->menu_wndclass.style			= (CS_HREDRAW | CS_VREDRAW);
 	popup->menu_wndclass.lpfnWndProc	= Internal_WndProc;
 	popup->menu_wndclass.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	popup->menu_wndclass.lpszClassName	= GenerateNewClassName("Classic_Popup");
+	popup->menu_wndclass.lpszClassName	= GenerateNewClassName(TEXT("Classic_Popup"));
 
 	if (!RegisterClass(&popup->menu_wndclass))
 	{

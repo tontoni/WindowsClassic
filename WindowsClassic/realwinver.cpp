@@ -2,7 +2,6 @@
 #ifdef _PROG_REALWINVER
 
 #include <stdio.h>
-
 #include "windowsclassic.h"
 
 struct NTOSInfo

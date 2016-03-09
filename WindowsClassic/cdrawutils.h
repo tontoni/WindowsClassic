@@ -75,7 +75,7 @@ class EXPORT CDrawUtils
 												UINT flags);
 
 		static void				DrawString(LPDRAWCONTEXT context,
-											TSTRING string,
+											STRING string,
 											int x,
 											int y,
 											int width = -1, 

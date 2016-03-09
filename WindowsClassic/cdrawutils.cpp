@@ -62,7 +62,8 @@ void CDrawUtils::FillGradientRectangleLTR(LPDRAWCONTEXT context,
 		{ x + w, y + h, col2.Red << 8, col2.Green << 8, col2.Blue << 8, col2.Alpha << 8 }
 	};
 
-	GRADIENT_RECT matrix_mesh[] = {
+	GRADIENT_RECT matrix_mesh[] = 
+	{
 		{ 0, 1 }
 	};
 
@@ -82,7 +83,31 @@ void CDrawUtils::FillGradientRectangleTTB(LPDRAWCONTEXT context,
 											int w,
 											int h)
 {
+	COLORRGBINFO col1,
+				 col2;
 
+	GetColorInfo(context->fill_color, &col1);
+	GetColorInfo(context->draw_color, &col2);
+
+	TRIVERTEX vertices[] =
+	{
+		{ x    , y    , col1.Red << 8, col1.Green << 8, col1.Blue << 8, col1.Alpha << 8 },
+		{ x + w, y + h, col2.Red << 8, col2.Green << 8, col2.Blue << 8, col2.Alpha << 8 }
+	};
+
+	GRADIENT_RECT matrix_mesh[] =
+	{
+		{ 0, 1 }
+	};
+
+	GradientFill(
+		context->paintstruct.hdc,
+		vertices,
+		ARRAYSIZE(vertices),
+		matrix_mesh,
+		ARRAYSIZE(matrix_mesh),
+		GRADIENT_FILL_RECT_V
+	);
 }
 
 // This might not be the best function to draw a simple rectangle
@@ -205,7 +230,7 @@ void CDrawUtils::FillRectangle3D(LPDRAWCONTEXT context,
 }
 
 void CDrawUtils::DrawString(LPDRAWCONTEXT context,
-							TSTRING string,
+							STRING string,
 							int x,
 							int y,
 							int width, 
@@ -224,10 +249,10 @@ void CDrawUtils::DrawString(LPDRAWCONTEXT context,
 		bounds.right = (x + width);
 		bounds.bottom = (y + height);
 
-		DrawText(context->paintstruct.hdc, string, StrLenA(string), &bounds, text_format);
+		DrawText(context->paintstruct.hdc, string, StrLen(string), &bounds, text_format);
 	}
 	else
 	{
-		TextOut(context->paintstruct.hdc, x, y, string, StrLenA(string));
+		TextOut(context->paintstruct.hdc, x, y, string, StrLen(string));
 	}
 }

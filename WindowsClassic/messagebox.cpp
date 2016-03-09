@@ -11,7 +11,8 @@ typedef struct __tagMSGBOXINFO
 {
 	HWND			parent;
 	HINSTANCE		hInstance;
-	TSTRING			message, 
+
+	WSTRING			message, 
 					title;
 
 	UINT			creation_flags;
@@ -29,10 +30,35 @@ static void MessageBoxEventListener(CClassicComponent *source,
 
 static DWORD WINAPI MessageBoxWorker(LPVOID param);
 
-int MessageBoxClassicA(HWND parent,
-						HINSTANCE hInst,
-						TSTRING message,
-						TSTRING title,
+int MessageBoxClassicA(HWND parent, 
+						TSTRING message, 
+						TSTRING title, 
+						UINT flags)
+{
+	WSTRING wMessage = NULL, 
+			wTitle = NULL;
+
+	if (message)
+		// Convert standard message string to a wide char string
+		wMessage = AllocWStr(message);
+
+	if (title)
+		wTitle = AllocWStr(title);
+
+	int ret_val = MessageBoxClassicW(parent, wMessage, wTitle, flags);
+	
+	if (wMessage)
+		free(wMessage);
+
+	if (wTitle)
+		free(wTitle);
+
+	return ret_val;
+}
+
+int MessageBoxClassicW(HWND parent,
+						WSTRING message,
+						WSTRING title,
 						UINT flags)
 {
 	DWORD thread_id;
@@ -44,7 +70,7 @@ int MessageBoxClassicA(HWND parent,
 	memset(info, 0, sizeof(MSGBOXINFO));
 
 	info->parent			= parent;
-	info->hInstance			= hInst;
+	info->hInstance			= GetModuleHandle(NULL); // The current instance handle
 	info->message			= message;
 	info->title				= title;
 	info->creation_flags	= flags;
@@ -100,7 +126,7 @@ HICON CheckAndLoadIcon(LPMSGBOXINFO info)
 
 void AddButtons(LPMSGBOXINFO info, 
 				LPCClassicWnd window, 
-				const TSTRING *button_texts, 
+				const STRING *button_texts, 
 				int button_cnt, 
 				int button_w, 
 				int button_h, 
@@ -136,7 +162,7 @@ bool HandleMsgBoxTypes(LPMSGBOXINFO info,
 	// We currently only have message boxes that have 
 	// 3 buttons at max
 	// +1 entry to tell the "StrPtrArrLen" function when to break
-	TSTRING button_texts[4];
+	STRING button_texts[4];
 	
 	for (int i = 0; i < ARRAYSIZE(button_texts); ++i)
 		button_texts[i] = NULL;
@@ -146,40 +172,40 @@ bool HandleMsgBoxTypes(LPMSGBOXINFO info,
 		// Adding the different message box buttons
 		case MB_OK:
 		{
-			button_texts[0] = "OK";
+			button_texts[0] = TEXT("OK");
 		} break;
 		case MB_OKCANCEL:
 		{
-			button_texts[0] = "OK";
-			button_texts[1] = "Cancel";
+			button_texts[0] = TEXT("OK");
+			button_texts[1] = TEXT("Cancel");
 		} break;
 		case MB_ABORTRETRYIGNORE:
 		{
-			button_texts[0] = "Abort";
-			button_texts[1] = "Retry";
-			button_texts[2] = "Ignore";
+			button_texts[0] = TEXT("Abort");
+			button_texts[1] = TEXT("Retry");
+			button_texts[2] = TEXT("Ignore");
 		} break;
 		case MB_YESNOCANCEL:
 		{
-			button_texts[0] = "Yes";
-			button_texts[1] = "No";
-			button_texts[2] = "Cancel";
+			button_texts[0] = TEXT("Yes");
+			button_texts[1] = TEXT("No");
+			button_texts[2] = TEXT("Cancel");
 		} break;
 		case MB_YESNO:
 		{
-			button_texts[0] = "Yes";
-			button_texts[1] = "No";
+			button_texts[0] = TEXT("Yes");
+			button_texts[1] = TEXT("No");
 		} break;
 		case MB_RETRYCANCEL:
 		{
-			button_texts[0] = "Retry";
-			button_texts[1] = "Cancel";
+			button_texts[0] = TEXT("Retry");
+			button_texts[1] = TEXT("Cancel");
 		} break;
 		case MB_CANCELTRYCONTINUE:
 		{
-			button_texts[0] = "Cancel";
-			button_texts[1] = "Try Again";
-			button_texts[2] = "Continue";
+			button_texts[0] = TEXT("Cancel");
+			button_texts[1] = TEXT("Try Again");
+			button_texts[2] = TEXT("Continue");
 		}
 		default:
 		{
@@ -187,7 +213,7 @@ bool HandleMsgBoxTypes(LPMSGBOXINFO info,
 		}
 	}
 
-	T_UINT32 button_cnt = StrPtrArrLenA(button_texts);
+	T_UINT32 button_cnt = StrPtrArrLen(button_texts);
 
 	if (!button_cnt)
 		// If the function wasn't able to add any buttons then
@@ -213,11 +239,11 @@ DWORD WINAPI MessageBoxWorker(LPVOID param)
 	
 	CClassicWnd *window = new CClassicWnd(
 		info->hInstance, 
-		GenerateNewClassName("MSGBOX_Classic_Window"), 
-		GenerateNewClassName("MSGBOX_Classic_Client")
+		GenerateNewClassName(TEXT("MSGBOX_Classic_Window")), 
+		GenerateNewClassName(TEXT("MSGBOX_Classic_Client"))
 	);
 
-	window->SetTitle(info->title);
+	window->SetTitle((STRING)info->title);
 
 	window->SetMinimizable(false);
 	window->SetResizable(false);
@@ -225,42 +251,48 @@ DWORD WINAPI MessageBoxWorker(LPVOID param)
 	CClassicLabel *label_message = new CClassicLabel(
 		info->hInstance, 
 		GenerateNewClassName(), 
-		info->message
+		(STRING)info->message
 	);
 	
 	// A temporary draw context which covers all available monitors
 	// we just use it to compute the size of the message label
-	HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
+	HDC temp_dc = CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
 
 	// Selecting our font, so that the metrics are correct
 	SelectObject(temp_dc, window->GetFont());
 
 	int label_w = 0,
 		label_h = 0;
-
-	TSTRING token = _strdup(info->message);
-	token = strtok(token, "\n");
-
+	
+	STRING token = StrDupl((STRING)info->message);
+	token = StrToken(token, TEXT("\n"));
+	
 	if (token)
 	{
 		while (token)
 		{
 			SIZE ln_size;
-			GetTextExtentPoint32(temp_dc, token, StrLenA(token), &ln_size);
+			GetTextExtentPoint32(temp_dc, token, StrLen(token), &ln_size);
 
 			if (label_w < ln_size.cx)
 				label_w = ln_size.cx;
 
 			label_h += ln_size.cy;
 
-			token = strtok(NULL, "\n");
+			token = StrToken(NULL, TEXT("\n"));
 		}
 	}
 	else
 	{
 		// If the message is only one line, just use the entire message
 		SIZE msg_size;
-		GetTextExtentPoint32(temp_dc, info->message, StrLenA(info->message), &msg_size);
+
+		GetTextExtentPoint32(
+			temp_dc, 
+			(STRING)info->message, 
+			StrLen((STRING)info->message), 
+			&msg_size
+		);
 
 		label_w = msg_size.cx;
 		label_h = msg_size.cy;

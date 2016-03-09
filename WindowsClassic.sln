@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WindowsClassic", "WindowsClassic\WindowsClassic.vcxproj", "{FF1E21CB-1236-47B1-8D36-9A58ED5E9000}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WindowsClassic_JNI", "WindowsClassic_JNI\WindowsClassic_JNI.vcxproj", "{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug (Classic Test)|x64 = Debug (Classic Test)|x64
@@ -57,6 +59,38 @@ Global
 		{FF1E21CB-1236-47B1-8D36-9A58ED5E9000}.Release|x64.Build.0 = Release|x64
 		{FF1E21CB-1236-47B1-8D36-9A58ED5E9000}.Release|x86.ActiveCfg = Release|Win32
 		{FF1E21CB-1236-47B1-8D36-9A58ED5E9000}.Release|x86.Build.0 = Release|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Classic Test)|x64.ActiveCfg = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Classic Test)|x64.Build.0 = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Classic Test)|x86.ActiveCfg = Debug (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Classic Test)|x86.Build.0 = Debug (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Library DLL)|x64.ActiveCfg = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Library DLL)|x64.Build.0 = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Library DLL)|x86.ActiveCfg = Debug (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (Library DLL)|x86.Build.0 = Debug (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (RealWinVer)|x64.ActiveCfg = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (RealWinVer)|x64.Build.0 = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (RealWinVer)|x86.ActiveCfg = Debug (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug (RealWinVer)|x86.Build.0 = Debug (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug|x64.ActiveCfg = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug|x64.Build.0 = Debug (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug|x86.ActiveCfg = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Debug|x86.Build.0 = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Classic Test)|x64.ActiveCfg = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Classic Test)|x64.Build.0 = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Classic Test)|x86.ActiveCfg = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Classic Test)|x86.Build.0 = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Library DLL)|x64.ActiveCfg = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Library DLL)|x64.Build.0 = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Library DLL)|x86.ActiveCfg = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (Library DLL)|x86.Build.0 = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (RealWinVer)|x64.ActiveCfg = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (RealWinVer)|x64.Build.0 = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (RealWinVer)|x86.ActiveCfg = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release (RealWinVer)|x86.Build.0 = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release|x64.ActiveCfg = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release|x64.Build.0 = Release (JNI)|x64
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release|x86.ActiveCfg = Release (JNI)|Win32
+		{BF51E079-2962-4AD1-97AB-55BB4CBC1B69}.Release|x86.Build.0 = Release (JNI)|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

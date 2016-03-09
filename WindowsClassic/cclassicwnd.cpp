@@ -4,7 +4,23 @@
 
 #include <stdio.h>
 
-static inline LONGLONG GetSystemTime()
+typedef enum WndContextMenuOption
+{
+	WND_CONTEXT_MENU_RESTORE = 0x00, 
+	WND_CONTEXT_MENU_MOVE, 
+	WND_CONTEXT_MENU_SIZE, 
+	WND_CONTEXT_MENU_MINIMIZE, 
+	WND_CONTEXT_MENU_MAXIMIZE, 
+	WND_CONTEXT_MENU_CLOSE
+} WndContextMenuOption;
+
+typedef struct __tagWndContextMenuUserdata
+{
+	WndContextMenuOption	menu_option;
+	LPCClassicWnd			parent_window;
+} WndContextMenuUserdata, *LPWndContextMenuUserdata;
+
+static LONGLONG GetSystemTime()
 {
 	LARGE_INTEGER s_freq;
 	BOOL s_use_qpc = QueryPerformanceFrequency(&s_freq);
@@ -21,7 +37,7 @@ static inline LONGLONG GetSystemTime()
 	}
 }
 
-TSTRING GenerateNewClassName(TSTRING prefix)
+STRING GenerateNewClassName(STRING prefix)
 {
 	TCHAR buffer[64];
 	LONGLONG sys_time = GetSystemTime();
@@ -29,26 +45,164 @@ TSTRING GenerateNewClassName(TSTRING prefix)
 	// Make sure that our name is REALLY unique!
 	// (Sorry but i can't think of a better solution :P)
 	sys_time *= (LONGLONG)(rand() % 10000);
-
-	sprintf(buffer, "%s_%I64d", prefix, sys_time);
-
-	TSTRING class_name = (TSTRING)malloc(sizeof(TCHAR) * StrLenA(buffer));
-	strcpy(class_name, buffer);
-
+	
+	PrintTo(buffer, TEXT("%s_%I64d"), prefix, sys_time);
+	
+	STRING class_name = (STRING)malloc(sizeof(TCHAR) * StrLen(buffer));
+	lstrcpy(class_name, buffer);
+	
 	return class_name;
 }
 
-#define IsPointOverTitlebar(mx, my, width, wnd_minimizable, wnd_resizable, wnd_closable) \
-		(IsPointInArea(mx, my, 3, 3, width - (((wnd_minimizable ? 16 : 0) + (wnd_resizable ? 16 : 0) + (wnd_closable ? 16 : 0)) + 2), 18))
+SIZE GetFontMetrics(HFONT font, STRING text)
+{
+	// I know, it might not be good to create so many DC's
+	// but it's the only way i know to pre-calculate things!
+	HDC temp_dc = CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
+	SelectObject(temp_dc, font);
 
-#define IsPointOverCloseButton(mx, my, width, wnd_closable) \
-		(IsPointInArea(mx, my, width - 21, 5, 16, 14)) && (wnd_closable)
+	SIZE size;
+	GetTextExtentPoint32(temp_dc, text, StrLen(text), &size);
 
-#define IsPointOverMaximizeButton(mx, my, width, wnd_resizable) \
-		(IsPointInArea(mx, my, width - 39, 5, 16, 14)) && (wnd_resizable)
+	DeleteDC(temp_dc);
 
-#define IsPointOverMinimizeButton(mx, my, width, wnd_minimizable) \
-		(IsPointInArea(mx, my, width - 55, 5, 16, 14)) && (wnd_minimizable)
+	return size;
+}
+
+static bool IsPointOverTitlebar(int mx, 
+								int my, 
+								int width, 
+								SIZE title_size, 
+								bool wnd_minimizable, 
+								bool wnd_resizable, 
+								bool wnd_closable, 
+								LPRECT bounds = NULL)
+{
+	int tbar_btn_w = (title_size.cy + 3);
+
+	int _width = (width - ((
+		(
+			wnd_minimizable ?
+			tbar_btn_w : 0
+			) + (
+				wnd_resizable ?
+				tbar_btn_w : 0
+			) + (
+				wnd_closable ?
+				tbar_btn_w : 0
+			)
+		) + 2)), 
+		_height = title_size.cy + 5;
+
+	if (bounds)
+	{
+		bounds->left = 3;
+		bounds->top = 3;
+		bounds->right = MAKECOORDINATE(3, _width);
+		bounds->bottom = MAKECOORDINATE(3, _height);
+	}
+
+	return (
+		IsPointInArea(
+			mx, my, 
+			3, 3, 
+			_width, _height
+		)
+	);
+}
+
+static bool IsPointOverCloseButton(int mx, 
+									int my, 
+									int width, 
+									SIZE title_size, 
+									bool wnd_closable,
+									LPRECT bounds = NULL)
+{
+	int tbar_btn_w = (title_size.cy + 3),
+		tbar_btn_h = (title_size.cy + 1);
+
+	int _x = (width - (tbar_btn_w + 5)),
+		_y = 5;
+
+	if (bounds)
+	{
+		bounds->left = _x;
+		bounds->top = _y;
+		bounds->right = MAKECOORDINATE(_x, tbar_btn_w);
+		bounds->bottom = MAKECOORDINATE(_y, tbar_btn_h);
+	}
+
+	return (
+		(IsPointInArea(
+			mx, my, 
+			_x, _y, 
+			tbar_btn_w, tbar_btn_h
+		)) &&
+		(wnd_closable)
+	);
+}
+
+static bool IsPointOverMaximizeButton(int mx, 
+										int my, 
+										int width, 
+										SIZE title_size, 
+										bool wnd_resizable,
+										LPRECT bounds = NULL)
+{
+	int tbar_btn_w = (title_size.cy + 3),
+		tbar_btn_h = (title_size.cy + 1);
+
+	int _x = (width - ((tbar_btn_w * 2) + 7)),
+		_y = 5;
+
+	if (bounds)
+	{
+		bounds->left = _x;
+		bounds->top = _y;
+		bounds->right = MAKECOORDINATE(_x, tbar_btn_w);
+		bounds->bottom = MAKECOORDINATE(_y, tbar_btn_h);
+	}
+
+	return (
+		(IsPointInArea(
+			mx, my, 
+			_x, _y, 
+			tbar_btn_w, tbar_btn_h
+		)) &&
+		(wnd_resizable)
+	);
+}
+
+static bool IsPointOverMinimizeButton(int mx, 
+										int my, 
+										int width, 
+										SIZE title_size, 
+										bool wnd_minimizable,
+										LPRECT bounds = NULL)
+{
+	int tbar_btn_w = (title_size.cy + 3),
+		tbar_btn_h = (title_size.cy + 1);
+	
+	int _x = (width - ((tbar_btn_w * 3) + 7)),
+		_y = 5;
+
+	if (bounds)
+	{
+		bounds->left = _x;
+		bounds->top = _y;
+		bounds->right = MAKECOORDINATE(_x, tbar_btn_w);
+		bounds->bottom = MAKECOORDINATE(_y, tbar_btn_h);
+	}
+
+	return (
+		(IsPointInArea(
+			mx, my, 
+			_x, _y, 
+			tbar_btn_w, tbar_btn_h
+		)) &&
+		(wnd_minimizable)
+	);
+}
 
 static WindowEdge IsPointInWindowEdge(int px, int py, int win_width, int win_height)
 {
@@ -96,49 +250,11 @@ static WindowEdge IsPointInWindowEdge(int px, int py, int win_width, int win_hei
 	return WE_NOTHING;
 }
 
-RECT CClassicWnd::AREA_GetTitlebarBounds()
-{
-	RECT bounds = { 
-		3, 3, 
-		MAKEWIDTH(this->__bounds) - 57, 18
-	};
-
-	return bounds;
-}
-
-RECT CClassicWnd::AREA_GetCloseButtonBounds()
-{
-	RECT bounds = {
-		MAKEWIDTH(this->__bounds) - 21, 5,
-		16, 14
-	};
-
-	return bounds;
-}
-
-RECT CClassicWnd::AREA_GetMaximizeButtonBounds()
-{
-	RECT bounds = {
-		MAKEWIDTH(this->__bounds) - 39, 5, 
-		16, 14
-	};
-
-	return bounds;
-}
-
-RECT CClassicWnd::AREA_GetMinimizeButtonBounds()
-{
-	RECT bounds = {
-		MAKEWIDTH(this->__bounds) - 55, 5,
-		16, 14
-	};
-
-	return bounds;
-}
+static void WndPopupProc(HPOPUP popup, UINT message, LPVOID param);
 
 CClassicWnd::__tagCClassicWnd(HINSTANCE hInst,
-								TSTRING wndclass_name, 
-								TSTRING wndclass_cl_name, 
+								STRING wndclass_name, 
+								STRING wndclass_cl_name, 
 								HICON icon, 
 								HICON icon_small)
 {
@@ -181,8 +297,8 @@ CClassicWnd::__tagCClassicWnd(HINSTANCE hInst,
 	this->__window_listeners = List_Create(64);
 	this->__components = List_Create(256);
 
-	this->font_titlebar = CreateSimpleFontIndependent("MS Sans Serif", 8, FW_BOLD);
-	this->font_element = CreateSimpleFontIndependent("MS Sans Serif", 8);
+	this->font_titlebar = CreateSimpleFontIndependent(TEXT("MS Sans Serif"), 8, FW_BOLD);
+	this->font_element = CreateSimpleFontIndependent(TEXT("MS Sans Serif"), 8);
 }
 
 CClassicWnd::~CClassicWnd()
@@ -193,7 +309,7 @@ int CClassicWnd::CreateAndShow(int xPos,
 								int yPos, 
 								int width, 
 								int height, 
-								TSTRING title)
+								STRING title)
 {
 	this->hWnd = CreateWindow(
 		this->wnd_class.lpszClassName,
@@ -249,8 +365,13 @@ int CClassicWnd::CreateAndShow(int xPos,
 
 void CClassicWnd::Destroy()
 {
+	/* !!! NOT THREADSAFE !!!
 	DestroyWindow(this->hWnd_client);
 	DestroyWindow(this->hWnd);
+	*/
+
+	SendMessage(this->hWnd_client, WM_CLOSE, 0, 0);
+	SendMessage(this->hWnd, WM_CLOSE, 0, 0);
 }
 
 // Private function
@@ -348,7 +469,7 @@ void CClassicWnd::SetSize(int width, int height)
 	);
 }
 
-void CClassicWnd::SetTitle(TSTRING new_title)
+void CClassicWnd::SetTitle(STRING new_title)
 {
 	this->__title = new_title;
 
@@ -406,6 +527,30 @@ void CClassicWnd::SetVisible(bool visible)
 	}
 }
 
+void CClassicWnd::SetTitlebarColorActiveLeft(DWORD color)
+{
+	this->color_titlebar_active_l = color;
+	this->RepaintWindow();
+}
+
+void CClassicWnd::SetTitlebarColorActiveRight(DWORD color)
+{
+	this->color_titlebar_active_r = color;
+	this->RepaintWindow();
+}
+
+void CClassicWnd::SetTitlebarColorInactiveLeft(DWORD color)
+{
+	this->color_titlebar_inactive_l = color;
+	this->RepaintWindow();
+}
+
+void CClassicWnd::SetTitlebarColorInactiveRight(DWORD color)
+{
+	this->color_titlebar_inactive_r = color;
+	this->RepaintWindow();
+}
+
 void CClassicWnd::SetBackgroundColor(DWORD color)
 {
 	this->__background_color = color;
@@ -421,6 +566,17 @@ void CClassicWnd::SetForegroundColor(DWORD color)
 void CClassicWnd::SetTitlebarFont(HFONT font)
 {
 	this->font_titlebar = font;
+
+	SendMessage(
+		this->hWnd, 
+		WM_SIZE, 
+		0, 
+		MAKELPARAM(
+			MAKEWIDTH(this->__bounds), 
+			MAKEHEIGHT(this->__bounds)
+		)
+	);
+
 	this->RepaintWindow();
 }
 
@@ -573,18 +729,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 	{
 		case WM_CREATE:
 		{
-			// I know, it might not be good to create so many DC's
-			// but it's the only way i know to pre-calculate things!
-			HDC temp_dc = CreateDC("DISPLAY", NULL, NULL, NULL);
-			SelectObject(temp_dc, this->font_titlebar);
-
-			TCHAR wnd_title[128];
-			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
-
-			SIZE title_size;
-			GetTextExtentPoint32(temp_dc, wnd_title, StrLenA(wnd_title), &title_size);
-
-			DeleteDC(temp_dc);
+			SIZE title_size = GetFontMetrics(this->font_titlebar, this->__title);
 
 			this->hWnd_client = CreateWindow(
 				this->wnd_class_client.lpszClassName,
@@ -617,20 +762,22 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 		} break;
 		case WM_SIZE:
 		{
-			int new_w = (int)((short)LOWORD(lParam)),
-				new_h = (int)((short)HIWORD(lParam));
-
 			// If the client area window is ready...
 			if (this->hWnd_client)
 			{
+				int new_w = (int)((short)LOWORD(lParam)),
+					new_h = (int)((short)HIWORD(lParam));
+
+				SIZE title_size = GetFontMetrics(this->font_titlebar, this->__title);
+
 				SetWindowPos(
 					this->hWnd_client, 
 					NULL, 
-					-1, 
-					-1, 
+					3, 
+					title_size.cy + 9,
 					new_w - 6, // Remember: Always double the value
-					new_h - 25, 
-					SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE
+					new_h - (title_size.cy + 12),
+					SWP_NOZORDER | SWP_NOACTIVATE
 				);
 			}
 		} break;
@@ -656,14 +803,19 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			// Window titlebar drawcode
 
-			context.fill_color = (this->activated ? 0x800000 : 0x808080);
-			context.draw_color = (this->activated ? 0xCC820C : CLASSIC_DEFAULT_BASECOLOR);
+			context.fill_color = (
+				this->activated ? 
+				this->color_titlebar_active_l : 
+				this->color_titlebar_inactive_l
+			);
+			
+			context.draw_color = (
+				this->activated ? 
+				this->color_titlebar_active_r : 
+				this->color_titlebar_inactive_r
+			);
 
-			TCHAR wnd_title[128];
-			GetWindowText(this->hWnd, wnd_title, ARRAYSIZE(wnd_title));
-
-			SIZE title_size;
-			GetTextExtentPoint32(hdc, wnd_title, StrLenA(wnd_title), &title_size);
+			SIZE title_size = GetFontMetrics(this->font_titlebar, this->__title);
 
 			CDrawUtils::FillGradientRectangleLTR(
 				&context,
@@ -677,11 +829,21 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			if (wnd_class.hIconSm)
 			{
+				int icon_size = (title_size.cy + 3);
+
 				// Draw the fucking Window Icon in the top left corner
 				// (if there is one)
-				DrawIconEx(hdc, 5, 4, wnd_class.hIconSm, 16, 16, 0, NULL, DI_NORMAL);
+				DrawIconEx(
+					hdc, 
+					5, 4,
+					wnd_class.hIconSm, 
+					icon_size, icon_size,
+					0, 
+					NULL, 
+					DI_NORMAL
+				);
 
-				title_x += 18; // Icon Width + 2 pixel extra
+				title_x += (icon_size + 2); // Icon Width + 2 pixel extra
 			}
 
 			int title_w_div = 57;
@@ -701,41 +863,48 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 
 			CDrawUtils::DrawString(
 				&context, 
-				wnd_title, 
+				this->__title,
 				title_x, 5, 
-				width - (title_w_div + title_x), 18
+				width - (title_w_div + title_x), title_size.cy
 			);
 
 			SetBkMode(hdc, OPAQUE);
+
+			int tbar_btn_w = (title_size.cy + 3),
+				tbar_btn_h = (title_size.cy + 1);
 
 			// X button
 			// Hardcoded colors - Not great i know!
 			if (this->closable)
 			{
 				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
-				CDrawUtils::FillRectangle3DSmall(&context, width - 21, 5, 16, 14, (!pressed_button_close) ? RECT_RAISED : 0);
+
+				int xbtn_x = (width - (tbar_btn_w + 5)),
+					xbtn_y = 5;
+
+				CDrawUtils::FillRectangle3DSmall(&context, xbtn_x, xbtn_y, tbar_btn_w, tbar_btn_h, (!pressed_button_close) ? RECT_RAISED : 0);
 
 				if (!this->close_button_enabled)
 				{
 					POINT x_pnt_3[4];
-					x_pnt_3[0].x = width - 16;
-					x_pnt_3[0].y = 9;
-					x_pnt_3[1].x = width - 15;
-					x_pnt_3[1].y = 9;
-					x_pnt_3[2].x = width - 10;
-					x_pnt_3[2].y = 15;
-					x_pnt_3[3].x = width - 9;
-					x_pnt_3[3].y = 15;
+					x_pnt_3[0].x = xbtn_x + 5;
+					x_pnt_3[0].y = xbtn_y + 4;
+					x_pnt_3[1].x = xbtn_x + 6;
+					x_pnt_3[1].y = xbtn_y + 4;
+					x_pnt_3[2].x = xbtn_x + (tbar_btn_w - 5);
+					x_pnt_3[2].y = xbtn_y + (tbar_btn_h - 4);
+					x_pnt_3[3].x = xbtn_x + (tbar_btn_w - 4);
+					x_pnt_3[3].y = xbtn_y + (tbar_btn_h - 4);
 
 					POINT x_pnt_4[4];
-					x_pnt_4[0].x = width - 9;
-					x_pnt_4[0].y = 9;
-					x_pnt_4[1].x = width - 10;
-					x_pnt_4[1].y = 9;
-					x_pnt_4[2].x = width - 15;
-					x_pnt_4[2].y = 15;
-					x_pnt_4[3].x = width - 16;
-					x_pnt_4[3].y = 15;
+					x_pnt_4[0].x = xbtn_x + (tbar_btn_w - 4);
+					x_pnt_4[0].y = xbtn_y + 4;
+					x_pnt_4[1].x = xbtn_x + (tbar_btn_w - 5);
+					x_pnt_4[1].y = xbtn_y + 4;
+					x_pnt_4[2].x = xbtn_x + 6;
+					x_pnt_4[2].y = xbtn_y + (tbar_btn_h - 4);
+					x_pnt_4[3].x = xbtn_x + 5;
+					x_pnt_4[3].y = xbtn_y + (tbar_btn_h - 4);
 
 					context.fill_color = 0xFFFFFF;
 
@@ -744,24 +913,24 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				}
 
 				POINT x_pnt_1[4];
-				x_pnt_1[0].x = width - 17;
-				x_pnt_1[0].y = 8;
-				x_pnt_1[1].x = width - 16;
-				x_pnt_1[1].y = 8;
-				x_pnt_1[2].x = width - 11;
-				x_pnt_1[2].y = 14;
-				x_pnt_1[3].x = width - 10;
-				x_pnt_1[3].y = 14;
+				x_pnt_1[0].x = xbtn_x + 4;
+				x_pnt_1[0].y = xbtn_y + 3;
+				x_pnt_1[1].x = xbtn_x + 5;
+				x_pnt_1[1].y = xbtn_y + 3;
+				x_pnt_1[2].x = xbtn_x + (tbar_btn_w - 6);
+				x_pnt_1[2].y = xbtn_y + (tbar_btn_h - 5);
+				x_pnt_1[3].x = xbtn_x + (tbar_btn_w - 5);
+				x_pnt_1[3].y = xbtn_y + (tbar_btn_h - 5);
 
 				POINT x_pnt_2[4];
-				x_pnt_2[0].x = width - 10;
-				x_pnt_2[0].y = 8;
-				x_pnt_2[1].x = width - 11;
-				x_pnt_2[1].y = 8;
-				x_pnt_2[2].x = width - 16;
-				x_pnt_2[2].y = 14;
-				x_pnt_2[3].x = width - 17;
-				x_pnt_2[3].y = 14;
+				x_pnt_2[0].x = xbtn_x + (tbar_btn_w - 5);
+				x_pnt_2[0].y = xbtn_y + 3;
+				x_pnt_2[1].x = xbtn_x + (tbar_btn_w - 6);
+				x_pnt_2[1].y = xbtn_y + 3;
+				x_pnt_2[2].x = xbtn_x + 5;
+				x_pnt_2[2].y = xbtn_y + (tbar_btn_h - 5);
+				x_pnt_2[3].x = xbtn_x + 4;
+				x_pnt_2[3].y = xbtn_y + (tbar_btn_h - 5);
 
 				context.fill_color = (this->close_button_enabled) ? 0x000000 : 0x808080;
 
@@ -774,17 +943,17 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 				(this->minimizable))
 			{
 				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
-				CDrawUtils::FillRectangle3DSmall(&context, width - 39, 5, 16, 14, (!this->pressed_button_maximize) ? RECT_RAISED : 0);
+				CDrawUtils::FillRectangle3DSmall(&context, width - ((tbar_btn_w * 2) + 7), 5, tbar_btn_w, tbar_btn_h, (!this->pressed_button_maximize) ? RECT_RAISED : 0);
 
 				if (maximized)
 				{
-					context.fill_color = 0x0000000;
+					context.fill_color = 0x000000;
 					CDrawUtils::FillSolidRectangle(&context, width - 34, 7, 6, 6);
 
 					context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
 					CDrawUtils::FillSolidRectangle(&context, width - 33, 9, 4, 3);
 
-					context.fill_color = 0x0000000;
+					context.fill_color = 0x000000;
 					CDrawUtils::FillSolidRectangle(&context, width - 36, 10, 6, 6);
 
 					context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
@@ -821,7 +990,7 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			if (this->minimizable)
 			{
 				context.fill_color = CLASSIC_DEFAULT_BASECOLOR;
-				CDrawUtils::FillRectangle3DSmall(&context, width - 55, 5, 16, 14, (!this->pressed_button_minimize) ? RECT_RAISED : 0);
+				CDrawUtils::FillRectangle3DSmall(&context, width - ((tbar_btn_w * 3) + 7), 5, tbar_btn_w, tbar_btn_h, (!this->pressed_button_minimize) ? RECT_RAISED : 0);
 
 				context.fill_color = 0x000000;
 				CDrawUtils::FillSolidRectangle(&context, width - 51, 14, 6, 2);
@@ -834,28 +1003,113 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			int mx = (int)((short)LOWORD(lParam)),
 				my = (int)((short)HIWORD(lParam));
 
+			SIZE title_size = GetFontMetrics(this->font_titlebar, this->__title);
+			RECT rdw_bounds;
+
+			int icon_size = (title_size.cy + 3);
+
+			// Window Icon
+			if ((this->wnd_class.hIconSm) && 
+				(IsPointInArea(mx, my, 5, 4, icon_size, icon_size)))
+			{
+				HPOPUP wnd_context_menu = CreatePopupMenuClassic(this->wnd_class.hInstance, WndPopupProc);
+
+				HMENUITEM item_restore = CreateAndAppendMenuItemClassic(
+					wnd_context_menu,
+					CPM_ITEM_TEXT | CPM_ITEM_STATE_DISABLED,
+					TEXT("Restore")
+				);
+
+				HMENUITEM item_move = CreateAndAppendMenuItemClassic(
+					wnd_context_menu,
+					CPM_ITEM_TEXT,
+					TEXT("Move")
+				);
+
+				HMENUITEM item_size = CreateAndAppendMenuItemClassic(
+					wnd_context_menu,
+					CPM_ITEM_TEXT,
+					TEXT("Size")
+				);
+
+				HMENUITEM item_minimize = CreateAndAppendMenuItemClassic(
+					wnd_context_menu,
+					CPM_ITEM_TEXT,
+					TEXT("Minimize")
+				);
+
+				HMENUITEM item_maximize = CreateAndAppendMenuItemClassic(
+					wnd_context_menu,
+					CPM_ITEM_TEXT,
+					TEXT("Maximize")
+				);
+
+				CreateAndAppendMenuItemClassic(wnd_context_menu, CPM_ITEM_SEPARATOR, NULL);
+
+				HMENUITEM item_close = CreateAndAppendMenuItemClassic(
+					wnd_context_menu,
+					CPM_ITEM_TEXT | CPM_ITEM_DEFAULT,
+					TEXT("Close")
+				);
+
+				// Yes i know, allocating all that memory just for the different
+				// Userdata may be a waste and bogus, though as soon as
+				// the handle to a menu item gets destroyed, it automatically
+				// also frees occupied userdata.
+				LPWndContextMenuUserdata option_restore = (LPWndContextMenuUserdata)malloc(sizeof(WndContextMenuUserdata));
+				option_restore->parent_window = this;
+				option_restore->menu_option = WND_CONTEXT_MENU_RESTORE;
+				SetMenuItemUserdata(item_restore, option_restore);
+
+				LPWndContextMenuUserdata option_move = (LPWndContextMenuUserdata)malloc(sizeof(WndContextMenuUserdata));
+				option_move->parent_window = this;
+				option_move->menu_option = WND_CONTEXT_MENU_MOVE;
+				SetMenuItemUserdata(item_move, option_move);
+
+				LPWndContextMenuUserdata option_size = (LPWndContextMenuUserdata)malloc(sizeof(WndContextMenuUserdata));
+				option_size->parent_window = this;
+				option_size->menu_option = WND_CONTEXT_MENU_SIZE;
+				SetMenuItemUserdata(item_size, option_size);
+
+				LPWndContextMenuUserdata option_minimize = (LPWndContextMenuUserdata)malloc(sizeof(WndContextMenuUserdata));
+				option_minimize->parent_window = this;
+				option_minimize->menu_option = WND_CONTEXT_MENU_MINIMIZE;
+				SetMenuItemUserdata(item_minimize, option_minimize);
+
+				LPWndContextMenuUserdata option_maximize = (LPWndContextMenuUserdata)malloc(sizeof(WndContextMenuUserdata));
+				option_maximize->parent_window = this;
+				option_maximize->menu_option = WND_CONTEXT_MENU_MAXIMIZE;
+				SetMenuItemUserdata(item_maximize, option_maximize);
+
+				LPWndContextMenuUserdata option_close = (LPWndContextMenuUserdata)malloc(sizeof(WndContextMenuUserdata));
+				option_close->parent_window = this;
+				option_close->menu_option = WND_CONTEXT_MENU_CLOSE;
+				SetMenuItemUserdata(item_close, option_close);
+
+				ShowPopupMenuClassic(wnd_context_menu);
+			}
 			// X button
-			if (IsPointOverCloseButton(mx, my, width, (this->closable) && (this->close_button_enabled)))
+			else if (IsPointOverCloseButton(mx, my, width, title_size, (this->closable) && (this->close_button_enabled), &rdw_bounds))
 			{
 				this->pressed_button_close = true;
-				this->RepaintWindow();
+				RedrawWindow(hWnd, &rdw_bounds, NULL, RDW_INVALIDATE);
 			}
 			// Maximize button
-			else if (IsPointOverMaximizeButton(mx, my, width, this->resizable))
+			else if (IsPointOverMaximizeButton(mx, my, width, title_size, this->resizable, &rdw_bounds))
 			{
 				this->pressed_button_maximize = true;
-				this->RepaintWindow();
+				RedrawWindow(hWnd, &rdw_bounds, NULL, RDW_INVALIDATE);
 			}
 			// Minimize button
-			else if (IsPointOverMinimizeButton(mx, my, width, this->minimizable))
+			else if (IsPointOverMinimizeButton(mx, my, width, title_size, this->minimizable, &rdw_bounds))
 			{
 				this->pressed_button_minimize = true;
-				this->RepaintWindow();
+				RedrawWindow(hWnd, &rdw_bounds, NULL, RDW_INVALIDATE);
 			}
 			else if (!this->maximized)
 			{
 				// Titlebar
-				if (IsPointOverTitlebar(mx, my, width, this->minimizable, this->resizable, this->closable))
+				if (IsPointOverTitlebar(mx, my, width, title_size, this->minimizable, this->resizable, this->closable))
 				{
 					this->drag_window = true;
 
@@ -884,6 +1138,9 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			int mx = (int)((short)LOWORD(lParam)),
 				my = (int)((short)HIWORD(lParam));
 
+			SIZE title_size = GetFontMetrics(this->font_titlebar, this->__title);
+			RECT rdw_bounds;
+			
 			drag_window = false;
 			resize_edge = WE_NOTHING;
 
@@ -891,45 +1148,40 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			{
 				pressed_button_close = false;
 				
-				if (IsPointOverCloseButton(mx, my, width, this->closable))
+				if (IsPointOverCloseButton(mx, my, width, title_size, this->closable, &rdw_bounds))
 				{
 					// User clicked and released on the X button
 					this->Destroy();
 					break;
 				}
 
-				this->RepaintWindow();
+				RedrawWindow(hWnd, &rdw_bounds, NULL, RDW_INVALIDATE);
 			}
 
 			if (this->pressed_button_maximize)
 			{
 				this->pressed_button_maximize = false;
 				
-				if (this->maximized)
+				if (IsPointOverMaximizeButton(mx, my, width, title_size, this->resizable, &rdw_bounds))
 				{
-					ShowWindow(hWnd, SW_RESTORE);
-					this->maximized = false;
-				}
-				else if (IsPointOverMaximizeButton(mx, my, width, this->resizable))
-				{
-					ShowWindow(hWnd, SW_MAXIMIZE);
-					this->maximized = true;
+					ShowWindow(hWnd, (this->maximized ? SW_RESTORE : SW_MAXIMIZE));
+					this->maximized = !this->maximized;
 				}
 
-				this->RepaintWindow();
+				RedrawWindow(hWnd, &rdw_bounds, NULL, RDW_INVALIDATE);
 			}
 
 			if (this->pressed_button_minimize)
 			{
 				this->pressed_button_minimize = false;
 				
-				if (IsPointOverMinimizeButton(mx, my, width, this->minimizable))
+				if (IsPointOverMinimizeButton(mx, my, width, title_size, this->minimizable, &rdw_bounds))
 				{
 					ShowWindow(hWnd, SW_MINIMIZE);
 					this->minimized = true;
 				}
 
-				this->RepaintWindow();
+				RedrawWindow(hWnd, &rdw_bounds, NULL, RDW_INVALIDATE);
 			}
 			
 			ReleaseCapture();
@@ -942,13 +1194,17 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 			// If the window currently isn't being dragged and maximized...
 			if ((!this->drag_window) &&
 				(!this->maximized) && 
-				(this->resizable))
+				(this->resizable) && 
+				(!this->pressed_button_minimize) && 
+				(!this->pressed_button_maximize) && 
+				(!this->pressed_button_close))
 			{
 				WindowEdge edge = (
 					(this->resize_edge != WE_NOTHING) ?
 					this->resize_edge : IsPointInWindowEdge(mx, my, width, height)
 				);
 
+				// Set the right cursor to the corresponding Window Edge
 				switch (edge)
 				{
 					case WE_TOPBORDER:
@@ -1088,6 +1344,8 @@ LRESULT CALLBACK CClassicWnd::WndProc(HWND hWnd,
 					flags |= SWP_NOSIZE;
 				}
 
+				this->__bounds = new_wnd_bounds;
+
 				SetWindowPos(
 					hWnd, 
 					NULL, 
@@ -1178,7 +1436,7 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 			// I don't really know, but for now we just do it, so that we don't waste any memory!
 			// Though, the remaining pointer addresses should not be reused, but there is no way to make sure that
 			// they're all zeroed out!
-			// So just don't re-use the same addresses.
+			// So just please don't re-use the same addresses.
 			for (int i = 0; 
 				i < List_GetCount(this->__components); 
 				++i)
@@ -1217,15 +1475,7 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 			context.draw_color = this->__foreground_color;
 
 			CDrawUtils::FillSolidRectangle(&context, 0, 0, width, height);
-
-#if 0
-			// This draw code is just for debugging here!
-			// In the future this will probably go away
-			CDrawUtils::DrawString(&context, "Microsoft doesn\'t wanna give us Windows Classic", 15, 40, -1, -1);
-			CDrawUtils::DrawString(&context, "So we give Windows Classic to Microsoft!", 15, 60, -1, -1);
-			CDrawUtils::DrawString(&context, ":P", 15, 80, -1, -1);
-#endif
-
+			
 			EndPaint(hWnd, &paintstrct);
 		} break;
 		default:
@@ -1233,4 +1483,22 @@ LRESULT CALLBACK CClassicWnd::WndProc_Client(HWND hWnd,
 	}
 
 	return 0;
+}
+
+void WndPopupProc(HPOPUP popup, UINT message, LPVOID param)
+{
+	if (message == CPM_ITEMSELECTED)
+	{
+		LPCPM_ITEMINFO info = (LPCPM_ITEMINFO)param;
+		LPWndContextMenuUserdata userdata = (LPWndContextMenuUserdata)GetMenuItemUserdata(info->menu_item);
+
+		switch (userdata->menu_option)
+		{
+			// TODO(toni): Handle all the other menu options!
+			case WND_CONTEXT_MENU_CLOSE:
+			{
+				userdata->parent_window->Destroy();
+			} break;
+		}
+	}
 }

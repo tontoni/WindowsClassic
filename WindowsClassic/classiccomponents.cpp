@@ -1,7 +1,7 @@
 
 #include "windowsclassic.h"
 
-__tagCClassicComponent::__tagCClassicComponent(HINSTANCE hInst, TSTRING name)
+__tagCClassicComponent::__tagCClassicComponent(HINSTANCE hInst, STRING name)
 {
 	this->wnd_class.cbSize				= sizeof(WNDCLASSEX);
 	this->wnd_class.style				= (CS_HREDRAW | CS_VREDRAW);
@@ -51,7 +51,7 @@ void __tagCClassicComponent::OnAdd(HWND parent)
 
 	if (!this->hWnd)
 	{
-		MessageBox(NULL, "Call to CreateWindow failed!", "Win32", NULL);
+		MessageBox(NULL, TEXT("Call to CreateWindow failed!"), TEXT("Win32"), NULL);
 		return;
 	}
 
@@ -265,7 +265,7 @@ LRESULT CALLBACK __tagCClassicComponent::WndProc(HWND hWnd,
 ////////////////////////////////////
 ////	CCLASSICTEXTCOMPONENT	////
 ////////////////////////////////////
-void __tagCClassicTextComponent::SetText(TSTRING text)
+void __tagCClassicTextComponent::SetText(STRING text)
 {
 	this->text = text;
 	this->RepaintComponent();
@@ -542,6 +542,30 @@ LRESULT CALLBACK __tagCClassicLabel::HandleMessage(HWND hWnd,
 													UINT message,
 													WPARAM wParam,
 													LPARAM lParam)
+{
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+
+////////////////////////////
+////	CCLASSICTEXTBOX	////
+////////////////////////////
+void __tagCClassicTextbox::OnCreate(void)
+{
+}
+
+void __tagCClassicTextbox::PaintComponent(LPDRAWCONTEXT context)
+{
+	int width = MAKEWIDTH(context->paintstruct.rcPaint),
+		height = MAKEHEIGHT(context->paintstruct.rcPaint);
+
+	CDrawUtils::FillRectangle3D(context, 0, 0, width, height, 0);
+}
+
+LRESULT CALLBACK __tagCClassicTextbox::HandleMessage(HWND hWnd,
+														UINT message,
+														WPARAM wParam,
+														LPARAM lParam)
 {
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }

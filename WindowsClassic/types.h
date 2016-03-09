@@ -34,15 +34,16 @@ typedef T_UINT8				T_BYTE;
 typedef T_UINT16			T_WORD;
 typedef T_UINT64			T_DWORD;
 
-typedef void *				T_PVOID;
+typedef void				*T_PVOID;
 
-typedef TCHAR *				TSTRING;
+typedef T_INT8				*TSTRING;
+typedef wchar_t				*WSTRING;
 
-// Unicode support (currently not really used though)
+// Unicode support
 #if (defined(UNICODE)) || (defined(_UNICODE))
-	#include <wchar.h>
-	
-	typedef WCHAR *				WSTRING;
+typedef WSTRING				STRING;
+#else
+typedef TSTRING				STRING;
 #endif // UNICODE || _UNICODE
 
 #endif // _TYPES_H_
